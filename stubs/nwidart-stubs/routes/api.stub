@@ -1,0 +1,10 @@
+<?php
+
+use Illuminate\Support\Facades\Route;
+
+// Served under /api/v1 (see this module's RouteServiceProvider).
+
+Route::get('$KEBAB_NAME$/ping', fn () => response()->json([
+    'module' => '$STUDLY_NAME$',
+    'status' => 'ok',
+]))->name('$LOWER_NAME$.ping');

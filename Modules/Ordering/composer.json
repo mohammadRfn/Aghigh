@@ -1,0 +1,30 @@
+{
+    "name": "aghigh/ordering",
+    "description": "",
+    "authors": [
+        {
+            "name": "Mohammad",
+            "email": ""
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\Ordering\\": "app/",
+            "Modules\\Ordering\\Database\\Factories\\": "database/factories/",
+            "Modules\\Ordering\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Ordering\\Tests\\": "tests/"
+        }
+    }
+}

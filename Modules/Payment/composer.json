@@ -1,0 +1,30 @@
+{
+    "name": "aghigh/payment",
+    "description": "",
+    "authors": [
+        {
+            "name": "Mohammad",
+            "email": ""
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\Payment\\": "app/",
+            "Modules\\Payment\\Database\\Factories\\": "database/factories/",
+            "Modules\\Payment\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Payment\\Tests\\": "tests/"
+        }
+    }
+}
