@@ -1,0 +1,30 @@
+{
+    "name": "aghigh/catalog",
+    "description": "",
+    "authors": [
+        {
+            "name": "Mohammad",
+            "email": ""
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\Catalog\\": "app/",
+            "Modules\\Catalog\\Database\\Factories\\": "database/factories/",
+            "Modules\\Catalog\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Catalog\\Tests\\": "tests/"
+        }
+    }
+}

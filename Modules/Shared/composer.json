@@ -1,0 +1,30 @@
+{
+    "name": "aghigh/shared",
+    "description": "",
+    "authors": [
+        {
+            "name": "Mohammad",
+            "email": ""
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\Shared\\": "app/",
+            "Modules\\Shared\\Database\\Factories\\": "database/factories/",
+            "Modules\\Shared\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\Shared\\Tests\\": "tests/"
+        }
+    }
+}

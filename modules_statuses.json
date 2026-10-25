@@ -1,0 +1,10 @@
+{
+    "Shared": true,
+    "Identity": true,
+    "Catalog": true,
+    "Inventory": true,
+    "Ordering": true,
+    "Payment": true,
+    "Chat": true,
+    "Notification": true
+}
