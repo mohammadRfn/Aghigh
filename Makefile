@@ -44,3 +44,14 @@ lint: ## Check code style (Pint)
 
 stan: ## Static analysis (Larastan)
 > $(DC) exec app ./vendor/bin/phpstan analyse --memory-limit=1G
+
+.PHONY: pull fresh-seed k6
+
+pull: ## Pull every non-built image (verifies the pinned tags exist; honours REGISTRY_PREFIX)
+> $(DC) --profile loadtest pull --ignore-buildable
+
+fresh-seed: ## DROP all tables, migrate and seed (dev only)
+> $(DC) exec -e DB_HOST=postgres -e DB_USERNAME=$(DB_MIGRATOR_USER) -e DB_PASSWORD=$(DB_MIGRATOR_PASSWORD) app php artisan migrate:fresh --seed --force
+
+k6: ## Run a k6 script from loadtests/ (make k6 s=smoke)
+> $(DC) --profile loadtest run --rm k6 run /scripts/$(or $(s),smoke).js

@@ -1,0 +1,30 @@
+http:
+  routers:
+    app:
+      rule: "PathPrefix(`/`)"
+      entryPoints: [web]
+      service: app
+      priority: 1
+    reverb:
+      rule: "PathPrefix(`/app/`) || PathPrefix(`/apps/`)"
+      entryPoints: [web]
+      service: reverb
+      priority: 10
+    mailpit:
+      rule: "Host(`mail.localhost`)"
+      entryPoints: [web]
+      service: mailpit
+      priority: 20
+  services:
+    app:
+      loadBalancer:
+        servers:
+          - url: "http://app:8000"
+    reverb:
+      loadBalancer:
+        servers:
+          - url: "http://reverb:8080"
+    mailpit:
+      loadBalancer:
+        servers:
+          - url: "http://mailpit:8025"
