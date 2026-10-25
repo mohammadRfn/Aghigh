@@ -57,3 +57,5 @@ COPY --chown=app:app . /app
 RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-scripts \
  && php artisan package:discover --ansi \
  && cp vendor/laravel/octane/src/Commands/stubs/frankenphp-worker.php public/frankenphp-worker.php
+COPY --chmod=0755 docker/prod-entrypoint.sh /usr/local/bin/prod-entrypoint
+ENTRYPOINT ["prod-entrypoint"]

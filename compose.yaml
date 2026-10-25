@@ -1,5 +1,11 @@
 name: aghigh
 
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 x-app: &app
   image: aghigh-app:dev
   pull_policy: never
@@ -17,17 +23,52 @@ x-app: &app
   volumes:
     - ./:/app
   restart: unless-stopped
+  logging: *logging
+  networks: [backend]
+  cpus: ${WORKER_CPUS:-1}
+  mem_limit: ${WORKER_MEM_LIMIT:-512m}
   depends_on:
     postgres:
       condition: service_healthy
     pgbouncer:
-      condition: service_started
+      condition: service_healthy
     redis-cache:
       condition: service_healthy
     redis-queue:
       condition: service_healthy
 
 services:
+  traefik:
+    image: ${REGISTRY_PREFIX:-}${TRAEFIK_IMAGE:-traefik:v3.6}
+    command:
+      - --providers.file.filename=/etc/traefik/dynamic.yml
+      - --providers.file.watch=true
+      - --entrypoints.web.address=:80
+      - --ping=true
+      - --accesslog=true
+      - --accesslog.format=json
+      - --log.level=INFO
+      - --global.checknewversion=false
+      - --global.sendanonymoususage=false
+    ports:
+      - "127.0.0.1:${HTTP_PORT:-8000}:80"
+    volumes:
+      - ./docker/traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 5s
+    depends_on:
+      app:
+        condition: service_healthy
+    networks: [edge]
+    cpus: ${TRAEFIK_CPUS:-0.5}
+    mem_limit: ${TRAEFIK_MEM_LIMIT:-128m}
+    logging: *logging
+    restart: unless-stopped
+
   app:
     <<: *app
     build:
@@ -36,6 +77,7 @@ services:
       args:
         UID: ${UID:-1000}
         GID: ${GID:-1000}
+        FRANKENPHP_IMAGE: ${REGISTRY_PREFIX:-}${FRANKENPHP_IMAGE:-dunglas/frankenphp:1-php8.5}
     pull_policy: missing
     command:
       - php
@@ -46,8 +88,7 @@ services:
       - --port=8000
       - --workers=${OCTANE_WORKERS:-2}
       - --max-requests=500
-    ports:
-      - "127.0.0.1:8000:8000"
+    networks: [edge, backend]
     cpus: ${APP_CPUS:-2}
     mem_limit: ${APP_MEM_LIMIT:-1g}
     healthcheck:
@@ -71,8 +112,7 @@ services:
   reverb:
     <<: *app
     command: ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080"]
-    ports:
-      - "127.0.0.1:8080:8080"
+    networks: [edge, backend]
     healthcheck:
       test: ["CMD", "php", "-r", "exit(@fsockopen('127.0.0.1', 8080) ? 0 : 1);"]
       interval: 15s
@@ -87,7 +127,7 @@ services:
       disable: true
 
   postgres:
-    image: postgres:18
+    image: ${REGISTRY_PREFIX:-}postgres:18
     env_file:
       - .env.docker
     volumes:
@@ -98,10 +138,14 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
+    networks: [backend]
+    cpus: ${PG_CPUS:-2}
+    mem_limit: ${PG_MEM_LIMIT:-1g}
+    logging: *logging
     restart: unless-stopped
 
   pgbouncer:
-    image: edoburu/pgbouncer@sha256:8638aa563607256d3c7440437534195f1066a92b68015d89ae9d6b935b444a6d
+    image: ${REGISTRY_PREFIX:-}edoburu/pgbouncer@sha256:8638aa563607256d3c7440437534195f1066a92b68015d89ae9d6b935b444a6d
     environment:
       DB_HOST: postgres
       DB_PORT: "5432"
@@ -113,23 +157,36 @@ services:
       MAX_CLIENT_CONN: "500"
       DEFAULT_POOL_SIZE: "20"
       MAX_PREPARED_STATEMENTS: "200"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-p", "5432"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
     depends_on:
       postgres:
         condition: service_healthy
+    networks: [backend]
+    cpus: ${PGBOUNCER_CPUS:-0.5}
+    mem_limit: ${PGBOUNCER_MEM_LIMIT:-128m}
+    logging: *logging
     restart: unless-stopped
 
   redis-cache:
-    image: redis:8
+    image: ${REGISTRY_PREFIX:-}redis:8
     command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "${REDIS_CACHE_MAXMEMORY:-256mb}", "--maxmemory-policy", "allkeys-lru"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 20
+    networks: [backend]
+    cpus: ${REDIS_CPUS:-0.5}
+    mem_limit: ${REDIS_CACHE_MEM_LIMIT:-384m}
+    logging: *logging
     restart: unless-stopped
 
   redis-queue:
-    image: redis:8
+    image: ${REGISTRY_PREFIX:-}redis:8
     command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec", "--maxmemory-policy", "noeviction"]
     volumes:
       - redis-queue-data:/data
@@ -138,7 +195,49 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
+    networks: [backend]
+    cpus: ${REDIS_CPUS:-0.5}
+    mem_limit: ${REDIS_QUEUE_MEM_LIMIT:-384m}
+    logging: *logging
     restart: unless-stopped
+
+  mailpit:
+    image: ${REGISTRY_PREFIX:-}${MAILPIT_IMAGE:-axllent/mailpit:v1.27}
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    networks: [edge, backend]
+    cpus: ${MAILPIT_CPUS:-0.25}
+    mem_limit: ${MAILPIT_MEM_LIMIT:-128m}
+    logging: *logging
+    restart: unless-stopped
+
+  # ---- profile "loadtest": make k6 s=smoke ----
+  k6:
+    image: ${REGISTRY_PREFIX:-}${K6_IMAGE:-grafana/k6:1.3.0}
+    profiles: [loadtest]
+    entrypoint: ["k6"]
+    command: ["run", "/scripts/smoke.js"]
+    environment:
+      BASE_URL: http://traefik
+    volumes:
+      - ./loadtests:/scripts:ro
+    depends_on:
+      traefik:
+        condition: service_healthy
+    networks: [edge]
+    logging: *logging
+    restart: "no"
+
+  # ---- profile "observability": reserved. Compose cannot declare an empty profile;
+  # ---- Prometheus/Grafana/Loki services will be added here with `profiles: [observability]`.
+
+networks:
+  edge: {}
+  backend:
+    internal: true
 
 volumes:
   pgdata:

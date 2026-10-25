@@ -18,6 +18,14 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Behind Traefik: trust forwarded headers only when TRUSTED_PROXIES is set
+        // ("*" or a comma-separated list of IPs/CIDRs). Unset = trust nobody.
+        $proxies = env('TRUSTED_PROXIES');
+
+        if (is_string($proxies) && $proxies !== '') {
+            $middleware->trustProxies(at: $proxies === '*' ? '*' : explode(',', $proxies));
+        }
+
         // Global, so even unmatched routes (404) get a request id and the headers.
         $middleware->prepend(AssignRequestId::class);
         $middleware->append(SecurityHeaders::class);
