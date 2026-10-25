@@ -61,16 +61,30 @@ services:
     <<: *app
     command: ["php", "artisan", "horizon"]
     stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD-SHELL", "php artisan horizon:status | grep -q running"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
 
   reverb:
     <<: *app
     command: ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080"]
     ports:
       - "127.0.0.1:8080:8080"
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(@fsockopen('127.0.0.1', 8080) ? 0 : 1);"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   scheduler:
     <<: *app
     command: ["php", "artisan", "schedule:work"]
+    healthcheck:
+      disable: true
 
   postgres:
     image: postgres:18
@@ -87,7 +101,7 @@ services:
     restart: unless-stopped
 
   pgbouncer:
-    image: edoburu/pgbouncer
+    image: edoburu/pgbouncer@sha256:8638aa563607256d3c7440437534195f1066a92b68015d89ae9d6b935b444a6d
     environment:
       DB_HOST: postgres
       DB_PORT: "5432"
