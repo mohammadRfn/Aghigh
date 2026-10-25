@@ -1,0 +1,75 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Modules\Shared\Exceptions;
+
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
+use Throwable;
+
+/**
+ * Renders API errors as RFC 9457 problem details (application/problem+json).
+ * Returns null for non-API requests so Laravel's default rendering applies.
+ */
+final class ProblemDetails
+{
+    public static function render(Throwable $e, Request $request): ?JsonResponse
+    {
+        if (! $request->is('api/*') && ! $request->expectsJson()) {
+            return null;
+        }
+
+        if ($e instanceof HttpResponseException) {
+            return null;
+        }
+
+        $debug = (bool) config('app.debug');
+        $headers = [];
+        $extra = [];
+
+        if ($e instanceof ValidationException) {
+            $status = $e->status;
+            $detail = 'The request contains invalid fields.';
+            $extra['errors'] = $e->errors();
+        } elseif ($e instanceof AuthenticationException) {
+            $status = 401;
+            $detail = 'Authentication is required.';
+            $headers['WWW-Authenticate'] = 'Bearer';
+        } elseif ($e instanceof HttpExceptionInterface) {
+            $status = $e->getStatusCode();
+            $headers = $e->getHeaders();
+            $detail = $e->getMessage();
+        } else {
+            $status = 500;
+            $detail = $debug ? $e->getMessage() : '';
+        }
+
+        // Never leak internals from server errors outside debug mode.
+        if ($status >= 500 && ! $debug) {
+            $detail = 'An unexpected error occurred.';
+        }
+
+        $title = Response::$statusTexts[$status] ?? 'Error';
+
+        if ($detail === '') {
+            $detail = $title;
+        }
+
+        $headers['Content-Type'] = 'application/problem+json';
+
+        return new JsonResponse([
+            'type' => 'about:blank',
+            'title' => $title,
+            'status' => $status,
+            'detail' => $detail,
+            'instance' => '/'.ltrim($request->path(), '/'),
+            'request_id' => $request->attributes->get('request_id'),
+        ] + $extra, $status, $headers);
+    }
+}
