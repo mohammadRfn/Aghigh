@@ -13,7 +13,7 @@ init: ## Create .env.docker from the example (once)
 > @test -f .env.docker || (cp .env.docker.example .env.docker && echo "created .env.docker - review the passwords")
 
 build: init ## Build the app image
-> $(DC) build
+> $(DC) build app
 
 up: init ## Start everything in the background
 > $(DC) up -d

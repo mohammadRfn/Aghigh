@@ -1,13 +1,8 @@
 name: aghigh
 
 x-app: &app
-  build:
-    context: .
-    target: dev
-    args:
-      UID: ${UID:-1000}
-      GID: ${GID:-1000}
   image: aghigh-app:dev
+  pull_policy: never
   env_file:
     - .env
     - .env.docker
@@ -35,6 +30,13 @@ x-app: &app
 services:
   app:
     <<: *app
+    build:
+      context: .
+      target: dev
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    pull_policy: missing
     command:
       - php
       - artisan
