@@ -7,6 +7,7 @@ namespace App\Providers;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
+use Modules\Shared\Logging\SlowQueryListener;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -28,5 +29,7 @@ class AppServiceProvider extends ServiceProvider
         Model::shouldBeStrict(! $this->app->isProduction());
 
         DB::prohibitDestructiveCommands($this->app->isProduction());
+
+        SlowQueryListener::register();
     }
 }
