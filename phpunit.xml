@@ -16,6 +16,10 @@
         <testsuite name="Arch">
             <directory>tests/Arch</directory>
         </testsuite>
+        <testsuite name="Concurrency">
+            <directory>tests/Concurrency</directory>
+            <directory>Modules/*/tests/Concurrency</directory>
+        </testsuite>
     </testsuites>
     <source>
         <include>
@@ -34,6 +38,9 @@
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
+        <env name="CACHE_LIMITER" value="array"/>
+        <env name="LOG_CHANNEL" value="null"/>
+        <env name="LOG_SLOW_QUERY_MS" value="0"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>

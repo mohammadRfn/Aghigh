@@ -65,7 +65,7 @@ services:
         condition: service_healthy
     networks: [edge]
     cpus: ${TRAEFIK_CPUS:-0.5}
-    mem_limit: ${TRAEFIK_MEM_LIMIT:-128m}
+    mem_limit: ${TRAEFIK_MEM_LIMIT:-256m}
     logging: *logging
     restart: unless-stopped
 
@@ -187,7 +187,7 @@ services:
 
   redis-queue:
     image: ${REGISTRY_PREFIX:-}redis:8
-    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec", "--maxmemory-policy", "noeviction"]
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec", "--maxmemory", "${REDIS_QUEUE_MAXMEMORY:-300mb}", "--maxmemory-policy", "noeviction"]
     volumes:
       - redis-queue-data:/data
     healthcheck:

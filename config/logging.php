@@ -2,10 +2,22 @@
 
 declare(strict_types=1);
 
+use Modules\Shared\Logging\RedactSensitiveData;
+use Monolog\Formatter\JsonFormatter;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
 use Monolog\Processor\PsrLogMessageProcessor;
+
+$json = static fn (string $name, string $level): array => [
+    'driver' => 'monolog',
+    'name' => $name,
+    'level' => $level,
+    'handler' => StreamHandler::class,
+    'handler_with' => ['stream' => env('LOG_JSON_STREAM', 'php://stdout')],
+    'formatter' => JsonFormatter::class,
+    'processors' => [PsrLogMessageProcessor::class, RedactSensitiveData::class],
+];
 
 return [
 
@@ -21,6 +33,8 @@ return [
     */
 
     'default' => env('LOG_CHANNEL', 'stack'),
+
+    'slow_query_ms' => (int) env('LOG_SLOW_QUERY_MS', 200),
 
     /*
     |--------------------------------------------------------------------------
@@ -53,6 +67,11 @@ return [
     */
 
     'channels' => [
+
+        'app' => $json('app', (string) env('LOG_LEVEL', 'debug')),
+        'security' => $json('security', 'info'),
+        'audit' => $json('audit', 'info'),
+        'slow_query' => $json('slow_query', 'warning'),
 
         'stack' => [
             'driver' => 'stack',

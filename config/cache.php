@@ -19,6 +19,9 @@ return [
 
     'default' => env('CACHE_STORE', 'database'),
 
+    // Rate limiter counters live on the non-evicting state Redis (tests override with array).
+    'limiter' => env('CACHE_LIMITER', 'state'),
+
     /*
     |--------------------------------------------------------------------------
     | Cache Stores
@@ -84,6 +87,12 @@ return [
             'driver' => 'redis',
             'connection' => env('REDIS_CACHE_CONNECTION', 'cache'),
             'lock_connection' => env('REDIS_CACHE_LOCK_CONNECTION', 'default'),
+        ],
+
+        'state' => [
+            'driver' => 'redis',
+            'connection' => 'state',
+            'lock_connection' => 'state',
         ],
 
         'dynamodb' => [
