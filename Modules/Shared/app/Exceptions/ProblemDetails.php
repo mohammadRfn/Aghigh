@@ -9,6 +9,7 @@ use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
+use Modules\Shared\Contracts\ProblemException;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Throwable;
@@ -19,6 +20,21 @@ use Throwable;
  */
 final class ProblemDetails
 {
+    private const SLUGS = [
+        400 => 'bad-request',
+        401 => 'unauthenticated',
+        403 => 'forbidden',
+        404 => 'not-found',
+        405 => 'method-not-allowed',
+        409 => 'conflict',
+        410 => 'gone',
+        413 => 'payload-too-large',
+        415 => 'unsupported-media-type',
+        422 => 'validation-error',
+        429 => 'too-many-requests',
+        503 => 'service-unavailable',
+    ];
+
     public static function render(Throwable $e, Request $request): ?JsonResponse
     {
         if (! $request->is('api/*') && ! $request->expectsJson()) {
@@ -32,8 +48,14 @@ final class ProblemDetails
         $debug = (bool) config('app.debug');
         $headers = [];
         $extra = [];
+        $slug = null;
 
-        if ($e instanceof ValidationException) {
+        if ($e instanceof ProblemException) {
+            $status = $e->problemStatus();
+            $detail = $e->getMessage();
+            $slug = $e->problemType();
+            $extra = $e->problemExtensions();
+        } elseif ($e instanceof ValidationException) {
             $status = $e->status;
             $detail = 'The request contains invalid fields.';
             $extra['errors'] = $e->errors();
@@ -61,10 +83,12 @@ final class ProblemDetails
             $detail = $title;
         }
 
+        $slug ??= self::SLUGS[$status] ?? ($status >= 500 ? 'internal-error' : 'client-error');
         $headers['Content-Type'] = 'application/problem+json';
 
+        // Reserved members come first, so extensions can never override them.
         return new JsonResponse([
-            'type' => 'about:blank',
+            'type' => rtrim((string) config('app.url'), '/').'/problems/'.$slug,
             'title' => $title,
             'status' => $status,
             'detail' => $detail,

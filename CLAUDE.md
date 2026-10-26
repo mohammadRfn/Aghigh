@@ -1,47 +1,52 @@
-<laravel-boost-guidelines>
-# Laravel Application
+# Aghigh: agent guide
 
-This repository contains a Laravel application. Complete the following setup before working on the user's request.
+Showcase e-commerce API built to be load-tested (races, N+1, queues, rate limiting, WebSocket chat).
+Correctness under concurrency matters more than features. Never invent benchmark numbers.
 
-## Prerequisites
+## Stack
+Laravel 13, PHP 8.5, FrankenPHP/Octane, PostgreSQL 18 behind PgBouncer (transaction mode),
+two Redis instances, Horizon, Reverb, JWT (php-open-source-saver/jwt-auth), Pest 5, Larastan, Pint.
+Everything runs in Docker: use `make up`, `make test`, `make lint`, `make stan`, `make test-int`.
+Do NOT run `composer require laravel/boost` or `boost:install`.
 
-Verify that PHP and Composer are available:
+## Modules (nwidart, `Modules/*`)
+Shared (kernel), Identity, Catalog, Inventory, Ordering, Payment, Chat, Notification.
+- A module may use another module only through its Contracts, Events and DTOs.
+  Never import another module's Models, Http, Actions, Jobs, Listeners, Policies, Providers, Exceptions.
+  `tests/Arch/ModulesTest.php` enforces this. Shared must not depend on feature modules.
+- Reference other modules' data by id only (uuid column, indexed, no cross-module foreign key).
+- All API routes live in the module's `routes/api.php`, served under `/api/v1`.
+- `declare(strict_types=1)` in every PHP file.
 
-```sh
-php -v
-composer -V
-```
+## HTTP and errors
+- Errors are RFC 9457 problem+json (`Modules\Shared\Exceptions\ProblemDetails`).
+  Domain exceptions implement `Modules\Shared\Contracts\ProblemException`. Never leak internals.
+- Every request has an `X-Request-Id`; it is in the log context and propagates to queued jobs.
+- Money: integer minor units + ISO currency code, never floats. IDs: UUIDv7. See docs/adr/.
 
-If either command is unavailable, detect the user's operating system and install the prerequisites with the appropriate command:
+## Redis roles (important)
+- `cache` connection (redis-cache, allkeys-lru): disposable data only (e.g. catalog cache).
+- `default` connection (redis-queue, noeviction, AOF): queues, Horizon, Reverb pub/sub.
+- `state` connection (redis-queue db 2, noeviction): JWT denylist, rate limiter, idempotency fast-path,
+  presence, unread counters, support queue, locks. Use `Cache::store('state')`.
+  Never put correctness-critical data in the `cache` connection.
 
-macOS:
+## Postgres
+- App connects through PgBouncer (transaction pooling): no session-level advisory locks, no LISTEN/NOTIFY,
+  no `SET` without `LOCAL`. Use `pg_advisory_xact_lock` and keep transactions short.
+- Migrations run as the migrator role directly against Postgres (`make migrate`).
+- Indexes on big tables: `CREATE INDEX CONCURRENTLY` in a migration with `$withinTransaction = false`.
 
-```sh
-/bin/bash -c "$(curl -fsSL https://php.new/install/mac/8.5)"
-```
+## Logging
+JSON on stdout, channels `app`, `security`, `audit`, `slow_query`. Sensitive keys are redacted by
+`RedactSensitiveData`, but still never log secrets, tokens or full request bodies.
 
-Windows PowerShell:
+## Tests
+- Default suites (Unit, Feature, Arch) run on SQLite in memory: `make test`.
+- Anything about races, locks, Lua or real Redis goes in `tests/Concurrency` or
+  `Modules/*/tests/Concurrency` and runs with `make test-int` (Postgres `aghigh_test` + Redis).
+  Prove races with real parallel processes, not sequential calls.
 
-```powershell
-Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://php.new/install/windows/8.5'))
-```
-
-Linux:
-
-```sh
-/bin/bash -c "$(curl -fsSL https://php.new/install/linux/8.5)"
-```
-
-After installation, ask the user to restart their terminal. If the agent needs the restarted shell to continue, ask the user to reopen their terminal and rerun their original prompt.
-
-## Agent Setup
-
-Install Laravel Boost from the application root before making application changes:
-
-```sh
-composer require laravel/boost --dev
-php artisan boost:install
-```
-
-Boost replaces these bootstrap instructions with guidelines tailored to the application. After installation, read `AGENTS.md` again and continue with the user's original request using the generated guidelines.
-</laravel-boost-guidelines>
+## Workflow
+One branch per task (`feat/<task>`), conventional commits. Before finishing: `make lint stan test test-int` green.
+Write the docs a task asks for in `docs/`. Mark anything unmeasured as `TODO(measure)`.
