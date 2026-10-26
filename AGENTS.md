@@ -50,3 +50,8 @@ JSON on stdout, channels `app`, `security`, `audit`, `slow_query`. Sensitive key
 ## Workflow
 One branch per task (`feat/<task>`), conventional commits. Before finishing: `make lint stan test test-int` green.
 Write the docs a task asks for in `docs/`. Mark anything unmeasured as `TODO(measure)`.
+Number new ADRs with the next free number in docs/adr/. Cross-module calls go through `Contracts/` interfaces;
+extend `tests/Arch/ModulesTest.php` when you add one. Race conditions are proven with real parallel processes
+against `aghigh_test` (helpers in `tests/Support/`), never with sequential calls.
+At the end of every task print three sections: Summary, Open decisions (choices you made that the task left open),
+and Manual steps for the user (env lines to copy into `.env.docker`, make targets to run, containers to restart).
