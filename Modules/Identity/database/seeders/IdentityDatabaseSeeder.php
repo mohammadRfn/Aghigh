@@ -5,14 +5,16 @@ declare(strict_types=1);
 namespace Modules\Identity\Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Modules\Identity\Models\User;
 
-class IdentityDatabaseSeeder extends Seeder
+final class IdentityDatabaseSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        // $this->call([]);
+        // Never provision a production account with a publicly documented password.
+        if (! app()->environment(['local', 'testing'])) {
+            return;
+        }
+        User::factory()->create(['name' => 'Development User', 'email' => 'test@example.com']);
     }
 }
