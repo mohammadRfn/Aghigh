@@ -6,6 +6,7 @@ namespace Tests\Support;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Modules\Identity\Models\User;
 use Modules\Identity\Services\Sessions;
@@ -38,6 +39,7 @@ final class IdentityTesting
             'identity.jwt.kid' => 'k1',
             'identity.jwt.private_key' => self::$secret,
             'identity.jwt.verification_keys' => ['k1' => self::$public],
+            'identity.dummy_hash' => Hash::make('dummy-password-for-tests'),
         ]);
 
         if ($arrayState) {
