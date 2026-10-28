@@ -47,7 +47,7 @@ final class Accounts
         if ($dummy === '') {
             throw new IdentityProblem('authentication-unavailable', 503, 'Authentication is temporarily unavailable.');
         }
-        $valid = Hash::check($password, $user?->password ?? $dummy);
+        $valid = Hash::check($password, $user->password ?? $dummy);
         if (! $valid || $user === null || $user->locked_until?->isFuture()) {
             if ($user !== null) {
                 $this->recordFailure($user);

@@ -7,4 +7,17 @@ parameters:
         - Modules
     excludePaths:
         - Modules/*/tests/*
+        - Modules/*/config/*   # module configs read env() by design
     level: 5
+    ignoreErrors:
+        # Larastan types Query Builder find()/selectOne() as object|array.
+        -
+            identifier: property.nonObject
+            paths:
+                - Modules/Identity/app/Jobs/SendIdentityMail.php
+                - Modules/Identity/app/Mail/IdentityMail.php
+                - Modules/Identity/app/Services/Sessions.php
+        # Repository::lock() exists on lock-capable stores (state Redis).
+        -
+            identifier: method.notFound
+            path: Modules/Identity/app/Jobs/SendIdentityMail.php

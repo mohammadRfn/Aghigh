@@ -13,8 +13,8 @@ use Modules\Identity\Models\User;
 use Modules\Identity\Rules\PasswordPolicy;
 use Modules\Identity\Services\Accounts;
 use Modules\Identity\Services\IdentityMessages;
-use Modules\Identity\Services\SessionTokens;
 use Modules\Identity\Services\Sessions;
+use Modules\Identity\Services\SessionTokens;
 
 /** Identity authentication. Refresh credentials are cookies, never response body fields. */
 final class AuthController

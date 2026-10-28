@@ -29,7 +29,9 @@ it('enforces the role-change authorization matrix', function (string $role): voi
     if ($role !== 'anonymous') {
         $this->withToken(IdentityTesting::access($actor));
     }
-    $expected = match ($role) { 'anonymous' => 401, 'admin' => 200, default => 403 };
+    $expected = match ($role) {
+        'anonymous' => 401, 'admin' => 200, default => 403
+    };
     $this->patchJson('/api/v1/users/'.$target->id.'/role', ['role' => 'support_agent'])->assertStatus($expected);
     expect($target->fresh()->role->value)->toBe($role === 'admin' ? 'support_agent' : 'customer');
 })->with('identity roles');
@@ -40,6 +42,8 @@ it('checks permission before target existence', function (string $role, string $
         $this->withToken(IdentityTesting::access($actor));
     }
     $path = '/api/v1/users/'.Str::uuid7().($method === 'PATCH' ? '/role' : '');
-    $expected = match ($role) { 'anonymous' => 401, 'admin' => 404, default => 403 };
+    $expected = match ($role) {
+        'anonymous' => 401, 'admin' => 404, default => 403
+    };
     $this->json($method, $path, ['role' => 'admin'])->assertStatus($expected);
 })->with('identity roles')->with(['GET', 'PATCH']);

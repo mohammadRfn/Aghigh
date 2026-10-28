@@ -7,6 +7,7 @@ namespace Modules\Identity\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Modules\Identity\Database\Factories\UserFactory;
 use Modules\Identity\Enums\Role;
@@ -18,13 +19,14 @@ use Modules\Identity\Enums\Role;
  * @property string $password
  * @property Role $role
  * @property int $failed_login_count
- * @property ?\Illuminate\Support\Carbon $email_verified_at
- * @property ?\Illuminate\Support\Carbon $locked_until
+ * @property ?Carbon $email_verified_at
+ * @property ?Carbon $locked_until
  */
 final class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory;
+
     use HasUuids;
 
     protected $fillable = ['name', 'email', 'password'];

@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 
+use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Modules\Identity\Http\Middleware\RequireOrigin;
 use Modules\Shared\Exceptions\ProblemDetails;
 use Modules\Shared\Http\Middleware\AssignRequestId;
 use Modules\Shared\Http\Middleware\SecurityHeaders;
@@ -29,6 +31,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // Global, so even unmatched routes (404) get a request id and the headers.
         $middleware->prepend(AssignRequestId::class);
         $middleware->append(SecurityHeaders::class);
+
+        // CSRF defense for cookie endpoints must run before authentication (else 401 hides 403).
+        $middleware->prependToPriorityList(AuthenticatesRequests::class, RequireOrigin::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
