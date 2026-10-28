@@ -29,7 +29,9 @@ RUN set -eu; \
       echo "install-php-extensions attempt $i failed, retrying in 10s"; sleep 10; \
     done
 
-RUN php -r 'foreach (["pdo_pgsql","redis","pcntl","posix","intl","bcmath","zip"] as $e) { if (!extension_loaded($e)) { fwrite(STDERR, "missing extension: $e\n"); exit(1); } }'
+RUN php -r 'foreach (["pdo_pgsql","redis","pcntl","posix","intl","bcmath","zip","sodium"] as $e) { if (!extension_loaded($e)) { fwrite(STDERR, "missing extension: $e\n"); exit(1); } }'
+
+RUN php -r 'if (!in_array("argon2id", password_algos(), true)) { fwrite(STDERR, "Argon2id is required\n"); exit(1); }'
 
 ARG UID=1000
 ARG GID=1000
