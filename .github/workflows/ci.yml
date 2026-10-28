@@ -24,7 +24,7 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.5'
-          extensions: pdo_pgsql, pdo_sqlite, redis, pcntl, intl, bcmath, zip
+          extensions: pdo_pgsql, pdo_sqlite, redis, pcntl, intl, bcmath, zip, sodium
           coverage: none
           tools: composer:v2
 
@@ -84,7 +84,7 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.5'
-          extensions: pdo_pgsql, pdo_sqlite, redis, pcntl, intl, bcmath, zip
+          extensions: pdo_pgsql, pdo_sqlite, redis, pcntl, intl, bcmath, zip, sodium
           coverage: none
           tools: composer:v2
 

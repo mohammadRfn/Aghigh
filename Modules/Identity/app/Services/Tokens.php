@@ -80,7 +80,7 @@ final class Tokens
             throw $this->invalid();
         }
         try {
-            $token = (new Parser(new JoseEncoder()))->parse($raw);
+            $token = (new Parser(new JoseEncoder))->parse($raw);
             if (! $token instanceof UnencryptedToken || $token->headers()->get('alg') !== 'EdDSA') {
                 throw $this->invalid();
             }
@@ -101,7 +101,7 @@ final class Tokens
                     return now()->toDateTimeImmutable();
                 }
             };
-            $valid = (new Validator())->validate($token,
+            $valid = (new Validator)->validate($token,
                 new SignedWith($this->signer(), $this->key((string) $keys[$kid])),
                 new IssuedBy((string) config('identity.jwt.issuer')),
                 new PermittedFor((string) config('identity.jwt.audience')),
@@ -158,7 +158,7 @@ final class Tokens
             throw new \LogicException('Only EdDSA is supported by this implementation.');
         }
 
-        return new Eddsa();
+        return new Eddsa;
     }
 
     private function invalid(): IdentityProblem

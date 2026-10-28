@@ -80,7 +80,7 @@ it('logs in, rotates its cookie and logs out without exposing refresh credential
     expect($cookie->isHttpOnly())->toBeTrue()->and($cookie->getSameSite())->toBe('strict')->and($cookie->getPath())->toBe('/api/v1/auth');
     $raw = $cookie->getValue();
     expect(DB::table('refresh_tokens')->value('token_hash'))->toBe(hash('sha256', $raw))->not->toBe($raw);
-    $rotated = $this->withUnencryptedCookie('aghigh_refresh', $raw)->withHeader('Origin', 'http://localhost:5173')->postJson('/api/v1/auth/refresh')->assertOk()->assertJsonMissingPath('refresh_token');
+    $rotated = $this->withCredentials()->withUnencryptedCookie('aghigh_refresh', $raw)->withHeader('Origin', 'http://localhost:5173')->postJson('/api/v1/auth/refresh')->assertOk()->assertJsonMissingPath('refresh_token');
     expect($rotated->getCookie('aghigh_refresh', false)->getValue())->not->toBe($raw);
     $this->withToken($rotated->json('access_token'))->getJson('/api/v1/me')->assertOk();
     $this->postJson('/api/v1/auth/logout')->assertOk();

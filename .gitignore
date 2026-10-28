@@ -28,3 +28,4 @@ Thumbs.db
 .txt
 .env.docker
 public/frankenphp-worker.php
+/storage/jwt/

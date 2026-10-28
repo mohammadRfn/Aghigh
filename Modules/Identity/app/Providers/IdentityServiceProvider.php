@@ -11,9 +11,9 @@ use Illuminate\Support\Facades\Auth;
 use Modules\Identity\Auth\JwtGuard;
 use Modules\Identity\Console\JwtKeys;
 use Modules\Identity\Console\PruneTokens;
-use Modules\Identity\Services\SecurityLimits;
 use Modules\Identity\Contracts\CurrentUser;
 use Modules\Identity\Models\User;
+use Modules\Identity\Services\SecurityLimits;
 use Modules\Identity\Services\Tokens;
 use Nwidart\Modules\Support\ModuleServiceProvider;
 
