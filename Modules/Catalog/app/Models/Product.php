@@ -31,6 +31,7 @@ final class Product extends Model
 {
     /** @use HasFactory<ProductFactory> */
     use HasFactory;
+
     use HasUuids;
 
     protected $fillable = ['category_id', 'sku', 'name', 'slug', 'description', 'price_minor', 'currency', 'status'];

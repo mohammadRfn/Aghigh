@@ -13,7 +13,7 @@ interface ProductPricing
      * Inactive products are returned with active=false. The input count (including
      * duplicates) is capped before deduplication to bound work.
      *
-     * @param list<string> $ids
+     * @param  list<string>  $ids
      * @return array<string, ProductPrice>
      */
     public function forProducts(array $ids): array;

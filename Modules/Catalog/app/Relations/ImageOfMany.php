@@ -20,7 +20,8 @@ final class ImageOfMany extends HasOne
 {
     protected function newOneOfManySubQuery($groupBy, $columns = null, $aggregate = null)
     {
-        $query = (clone $this->query->getModel())->newQuery()->withoutGlobalScopes($this->removedScopes());
+        $query = (clone $this->query->getModel())->newQuery()->withoutGlobalScopes($this->query->removedScopes());
+        $isPgsql = $this->query->getModel()->getConnection()->getDriverName() === 'pgsql';
         foreach (Arr::wrap($groupBy) as $group) {
             $query->groupBy($this->qualifyRelatedColumn($group));
         }
@@ -28,7 +29,7 @@ final class ImageOfMany extends HasOne
             $grammar = $query->getQuery()->getGrammar();
             $wrapped = $grammar->wrap($query->qualifyColumn($column));
             $function = $index === 0 ? $aggregate : 'min';
-            $expression = $column === 'id' && $query->getConnection()->getDriverName() === 'pgsql'
+            $expression = $column === 'id' && $isPgsql
                 ? "{$function}({$wrapped}::text)::uuid"
                 : "{$function}({$wrapped})";
             $query->selectRaw($expression.' as '.$grammar->wrap($column.'_aggregate'));

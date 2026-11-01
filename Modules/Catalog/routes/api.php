@@ -12,6 +12,8 @@ use Modules\Catalog\Http\Middleware\AdminHeaders;
 use Modules\Catalog\Http\Middleware\BenchOnly;
 use Modules\Catalog\Support\BenchEnvironment;
 
+Route::get('catalog/ping', fn () => response()->json(['module' => 'Catalog', 'status' => 'ok']))->name('catalog.ping');
+
 // No rate limiting in Task 4. Task 7 can attach distinct public/admin groups here.
 Route::get('products', [ProductController::class, 'index'])->name('catalog.products.index');
 Route::get('products/{identifier}', [ProductController::class, 'show'])->name('catalog.products.show');

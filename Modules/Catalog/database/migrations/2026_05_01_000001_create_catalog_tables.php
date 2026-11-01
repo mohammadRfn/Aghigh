@@ -11,7 +11,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('categories', function (Blueprint $table): void {
-            $table->uuid('id')->primary();
+            $table->uuid('id');
+            $table->primary('id'); // explicit, so the PK exists before the self-referencing FK
             $table->foreignUuid('parent_id')->nullable()->constrained('categories')->restrictOnDelete();
             $table->string('name', 160);
             $table->string('slug', 160)->unique();

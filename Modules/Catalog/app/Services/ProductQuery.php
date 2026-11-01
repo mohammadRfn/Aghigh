@@ -21,7 +21,10 @@ final class ProductQuery
 
     public function __construct(private readonly CursorCodec $cursor) {}
 
-    /** @param array<string, mixed> $params @return Builder<Product> */
+    /**
+     * @param  array<string, mixed>  $params
+     * @return Builder<Product>
+     */
     public function optimized(array $params): Builder
     {
         $query = Product::query()->select(self::COLUMNS)->whereRaw("status = 'active'");
@@ -42,7 +45,10 @@ final class ProductQuery
         return $query;
     }
 
-    /** @param array<string, mixed> $params @return array<string, mixed> */
+    /**
+     * @param  array<string, mixed>  $params
+     * @return array<string, mixed>
+     */
     public function page(array $params, Request $request): array
     {
         $position = $this->cursor->decode($params);

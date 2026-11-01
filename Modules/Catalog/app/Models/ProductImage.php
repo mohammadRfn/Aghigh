@@ -8,7 +8,15 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
-/** @property string $id @property string $product_id @property string $path @property int $width @property int $height @property int $position @property string $alt */
+/**
+ * @property string $id
+ * @property string $product_id
+ * @property string $path
+ * @property int $width
+ * @property int $height
+ * @property int $position
+ * @property string $alt
+ */
 final class ProductImage extends Model
 {
     use HasUuids;

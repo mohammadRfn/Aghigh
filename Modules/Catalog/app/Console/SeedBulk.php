@@ -18,10 +18,15 @@ final class SeedBulk extends Command
 
     // Dataset design constants, NOT measured percentages or performance results.
     private const BATCH = 50000;
+
     private const ACTIVE_PERCENT = 85;
+
     private const DRAFT_END_PERCENT = 95;
+
     private const ROOT_CATEGORIES = 20;
+
     private const HOT_SHARE_TENTHS = 8;
+
     private const WORDS = ['گلدان', 'ceramic', 'linen', 'handmade', 'کوسن', 'cotton', 'stoneware', 'فنجان', 'woven', 'natural', 'ظرف', 'classic', 'blue', 'walnut', 'بشقاب', 'vintage', 'minimal', 'brass', 'چراغ', 'soft', 'wooden', 'pattern', 'زعفران', 'clay', 'silver', 'artisan', 'فرش', 'glass', 'green', 'basket', 'ترمه', 'light'];
 
     public function handle(CatalogVersions $versions): int
@@ -96,7 +101,7 @@ final class SeedBulk extends Command
             DB::insert("INSERT INTO categories (id, parent_id, name, slug, position) SELECT uuidv7(), NULL, 'Collection ' || i, 'bulk-category-' || i, i FROM generate_series(1, ?) AS g(i)", [$roots]);
             for ($from = $roots + 1; $from <= $categories; $from += self::BATCH) {
                 $to = min($categories, $from + self::BATCH - 1);
-                DB::transaction(fn (): bool => DB::insert("INSERT INTO categories (id, parent_id, name, slug, position) SELECT uuidv7(), c.id, 'Category ' || g.i, 'bulk-category-' || g.i, g.i FROM generate_series(?, ?) AS g(i) JOIN categories c ON c.slug = 'bulk-category-' || (1 + ((g.i - ? - 1) % ?))", [$from, $to, $roots, $roots]));
+                DB::transaction(fn (): bool => DB::insert("INSERT INTO categories (id, parent_id, name, slug, position) SELECT uuidv7(), c.id, 'Category ' || g.i, 'bulk-category-' || g.i, g.i FROM generate_series(?::int, ?::int) AS g(i) JOIN categories c ON c.slug = 'bulk-category-' || (1 + ((g.i - ? - 1) % ?))", [$from, $to, $roots, $roots]));
             }
             $words = 'ARRAY['.implode(',', array_map(static fn (string $word): string => "'".str_replace("'", "''", $word)."'", self::WORDS)).']';
             $this->info("Seeding {$products} products. Constants: 85% active, 10% draft, 5% archived; skewed categories and integer prices.");
@@ -111,7 +116,7 @@ final class SeedBulk extends Command
                       ELSE 10000000 + (g.i * 997::bigint) % 90000000 END, ?::bigint), ?,
                     CASE WHEN g.i % 100 < ".self::ACTIVE_PERCENT." THEN 'active' WHEN g.i % 100 < ".self::DRAFT_END_PERCENT." THEN 'draft' ELSE 'archived' END,
                     timestamp '2024-01-01' + g.i * interval '1 second', timestamp '2024-01-01' + g.i * interval '1 second'
-                    FROM generate_series(?, ?) AS g(i)
+                    FROM generate_series(?::int, ?::int) AS g(i)
                     JOIN categories c ON c.slug = 'bulk-category-' || (? + 1 + CASE WHEN g.i % 10 < ".self::HOT_SHARE_TENTHS.' THEN g.i % ? ELSE g.i % ? END)';
                 DB::transaction(fn (): bool => DB::insert($sql, [(int) config('catalog.price_max_minor'), (string) config('catalog.currency'), $from, $to, $roots, $hot, $leaves]));
                 $this->line("Products: {$to}/{$products}");
@@ -122,7 +127,7 @@ final class SeedBulk extends Command
                     $to = min($products, $from + $productBatch - 1);
                     DB::transaction(fn (): bool => DB::insert("INSERT INTO product_images (id, product_id, path, width, height, position, alt)
                         SELECT uuidv7(), p.id, 'catalog/' || g.i || '/' || image.i || '.jpg', 1200, 1200, image.i, 'Product ' || g.i || ', image ' || image.i
-                        FROM generate_series(?, ?) AS g(i)
+                        FROM generate_series(?::int, ?::int) AS g(i)
                         JOIN products p ON p.sku = 'BULK-' || lpad(g.i::text, 10, '0')
                         CROSS JOIN generate_series(0, ?) AS image(i)", [$from, $to, $images - 1]));
                     $this->line('Images: '.($to * $images).'/'.($products * $images));

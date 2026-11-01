@@ -19,8 +19,9 @@ final class CatalogWriter
 
     /**
      * @template T of Model
-     * @param list<string> $fields
-     * @param Closure(): T $operation
+     *
+     * @param  list<string>  $fields
+     * @param  Closure(): T  $operation
      * @return T
      */
     public function run(CurrentUser $actor, string $entity, array $fields, Closure $operation): Model

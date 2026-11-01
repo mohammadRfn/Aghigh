@@ -32,7 +32,10 @@ final class CursorCodec
         return hash_hmac('sha256', 'aghigh/catalog/cursor/v1', $key, true);
     }
 
-    /** @param array<string, mixed> $params @param array{id:string,price_minor:int,offset:int} $position */
+    /**
+     * @param  array<string, mixed>  $params
+     * @param  array{id:string,price_minor:int,offset:int}  $position
+     */
     public function encode(array $params, array $position, string $mode = 'optimized'): string
     {
         $payload = json_encode(['v' => 1, 'sort' => $params['sort'], 'filters' => $this->filterHash($params), 'mode' => $mode, 'position' => $position], JSON_THROW_ON_ERROR);
@@ -41,7 +44,10 @@ final class CursorCodec
         return $encoded.'.'.hash_hmac('sha256', $encoded, $this->key());
     }
 
-    /** @param array<string, mixed> $params @return array{id:string,price_minor:int,offset:int}|null */
+    /**
+     * @param  array<string, mixed>  $params
+     * @return array{id:string,price_minor:int,offset:int}|null
+     */
     public function decode(array $params, string $mode = 'optimized'): ?array
     {
         if (empty($params['cursor'])) {

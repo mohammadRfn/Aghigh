@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -97,7 +97,7 @@ it('sends public validators without cookies and keeps benchmark responses uncach
         $this->withHeader('If-None-Match', $response->headers->get('ETag'))->getJson($url)->assertStatus(304)->assertContent('');
         $this->flushHeaders();
     }
-    $this->getJson('/api/v1/_bench/naive/products')->assertOk()->assertHeader('Cache-Control', 'no-store');
+    $this->getJson('/api/v1/_bench/naive/products')->assertOk()->assertHeader('Cache-Control', 'no-store, private');
 });
 
 it('rejects short and overlong search strings before querying SQLite', function (): void {

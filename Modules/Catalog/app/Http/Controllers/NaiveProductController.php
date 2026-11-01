@@ -43,7 +43,7 @@ final class NaiveProductController
             }
             if ($params['q'] !== null) {
                 $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], (string) $params['q']);
-                $operator = $query->getConnection()->getDriverName() === 'pgsql' ? 'ILIKE' : 'LIKE';
+                $operator = $query->getModel()->getConnection()->getDriverName() === 'pgsql' ? 'ILIKE' : 'LIKE';
                 $query->whereRaw("name {$operator} ? ESCAPE '\\'", ['%'.$escaped.'%']);
             }
             if ($params['sort'] === 'newest') {

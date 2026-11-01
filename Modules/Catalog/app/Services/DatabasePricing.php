@@ -18,7 +18,7 @@ final class DatabasePricing implements ProductPricing
             throw new CatalogProblem('Too many product IDs in the pricing request.');
         }
         foreach ($ids as $id) {
-            if (! is_string($id) || ! Str::isUuid($id)) {
+            if (! Str::isUuid($id)) {
                 throw new CatalogProblem('Pricing IDs must be UUIDs.');
             }
         }

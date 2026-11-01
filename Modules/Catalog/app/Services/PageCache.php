@@ -18,8 +18,8 @@ final class PageCache
      * Only plain arrays enter the disposable store. Cold misses hold the state lock
      * through both computation and storage, and re-check after acquiring it.
      *
-     * @param array<string, mixed> $params
-     * @param Closure(): array<string, mixed> $compute
+     * @param  array<string, mixed>  $params
+     * @param  Closure(): array<string, mixed>  $compute
      * @return array<string, mixed>
      */
     public function remember(string $namespace, array $params, Closure $compute): array
@@ -46,7 +46,10 @@ final class PageCache
         }
     }
 
-    /** @param Closure(): array<string, mixed> $compute @return array<string, mixed> */
+    /**
+     * @param  Closure(): array<string, mixed>  $compute
+     * @return array<string, mixed>
+     */
     private function flexible(string $key, Closure $compute): array
     {
         $result = Cache::store('cache')->flexible($key, [
