@@ -89,6 +89,13 @@ return [
             'lock_connection' => env('REDIS_CACHE_LOCK_CONNECTION', 'default'),
         ],
 
+        'cache' => [
+            'driver' => 'redis',
+            'connection' => 'cache',
+            // Cache::flexible refresh locks MUST be on the non-evicting instance.
+            'lock_connection' => 'state',
+        ],
+
         'state' => [
             'driver' => 'redis',
             'connection' => 'state',

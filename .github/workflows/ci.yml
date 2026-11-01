@@ -43,7 +43,7 @@ jobs:
       - run: php artisan key:generate
       - run: ./vendor/bin/pint --test
       - run: ./vendor/bin/phpstan analyse --memory-limit=1G --no-progress
-      - run: php artisan test
+      - run: php artisan test --testsuite=Unit,Feature,Arch
 
   integration:
     runs-on: ubuntu-latest

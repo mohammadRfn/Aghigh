@@ -37,7 +37,7 @@ migrate: ## Run migrations as the DDL role, directly against Postgres
 > @$(DC) exec -e DB_HOST=postgres -e DB_USERNAME=$(DB_MIGRATOR_USER) -e DB_PASSWORD=$(DB_MIGRATOR_PASSWORD) app php artisan migrate --force
 
 test: ## Run the test suite (sqlite in memory; never touches Postgres)
-> $(DC) exec -e DB_CONNECTION=sqlite -e DB_DATABASE=:memory: -e CACHE_STORE=array -e CACHE_LIMITER=array -e QUEUE_CONNECTION=sync -e SESSION_DRIVER=array -e LOG_CHANNEL=null app php artisan test
+> $(DC) exec -e DB_CONNECTION=sqlite -e DB_DATABASE=:memory: -e CACHE_STORE=array -e CACHE_LIMITER=array -e QUEUE_CONNECTION=sync -e SESSION_DRIVER=array -e LOG_CHANNEL=null app php artisan test --testsuite=Unit,Feature,Arch
 
 lint: ## Check code style (Pint)
 > $(DC) exec app ./vendor/bin/pint --test
@@ -45,7 +45,20 @@ lint: ## Check code style (Pint)
 stan: ## Static analysis (Larastan)
 > $(DC) exec app ./vendor/bin/phpstan analyse --memory-limit=1G
 
-.PHONY: pull fresh-seed k6
+.PHONY: pull fresh-seed k6 seed-catalog psql explain-catalog
+
+explain-catalog: ## Save real EXPLAIN evidence (LABEL=before or after; see performance-notes first)
+> @mkdir -p docs/perf
+> @{ date -u; uname -a; git rev-parse HEAD; } > docs/perf/$(or $(LABEL),plan).txt
+> @set -o pipefail; $(DC) exec -T -e PGPASSWORD=$(DB_MIGRATOR_PASSWORD) postgres psql -h 127.0.0.1 -U $(DB_MIGRATOR_USER) -d $(POSTGRES_DB) -v ON_ERROR_STOP=1 < docs/perf/query-shapes.sql 2>&1 | tee -a docs/perf/$(or $(LABEL),plan).txt
+
+N ?= 100000
+
+seed-catalog: ## Bulk catalog fixtures as migrator, direct Postgres (make seed-catalog N=100000)
+> @$(DC) exec -e DB_HOST=postgres -e DB_USERNAME=$(DB_MIGRATOR_USER) -e DB_PASSWORD=$(DB_MIGRATOR_PASSWORD) app php artisan catalog:seed-bulk --products=$(N)
+
+psql: ## Interactive psql as migrator directly against Postgres
+> @$(DC) exec -e PGPASSWORD=$(DB_MIGRATOR_PASSWORD) postgres psql -h 127.0.0.1 -U $(DB_MIGRATOR_USER) -d $(POSTGRES_DB)
 
 pull: ## Pull every non-built image (verifies the pinned tags exist; honours REGISTRY_PREFIX)
 > $(DC) --profile loadtest pull --ignore-buildable

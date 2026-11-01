@@ -12,7 +12,7 @@ $modules = array_map(
 
 $kernel = 'Shared';
 $featureModules = array_values(array_diff($modules, [$kernel]));
-$privateLayers = ['Models', 'Http', 'Actions', 'Jobs', 'Listeners', 'Policies', 'Providers', 'Exceptions'];
+$privateLayers = ['Models', 'Http', 'Actions', 'Jobs', 'Listeners', 'Policies', 'Providers', 'Exceptions', 'Services', 'Relations', 'Support', 'Console', 'Database'];
 
 foreach ($featureModules as $module) {
     $forbidden = [];
