@@ -7,6 +7,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Modules\Catalog\Http\Middleware\AdminHeaders;
 use Modules\Identity\Http\Middleware\RequireOrigin;
 use Modules\Shared\Exceptions\ProblemDetails;
 use Modules\Shared\Http\Middleware\AssignRequestId;
@@ -34,6 +35,8 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // CSRF defense for cookie endpoints must run before authentication (else 401 hides 403).
         $middleware->prependToPriorityList(AuthenticatesRequests::class, RequireOrigin::class);
+        // Catalog admin responses (including 401/403) must carry private, no-store: wrap auth.
+        $middleware->prependToPriorityList(AuthenticatesRequests::class, AdminHeaders::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
