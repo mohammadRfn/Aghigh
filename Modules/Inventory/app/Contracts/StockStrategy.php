@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Modules\Inventory\Contracts;
 
+use Modules\Inventory\Exceptions\OutOfStock;
+
 /**
  * How stock_items counters move from available to reserved. Selected by STOCK_STRATEGY
  * (naive | atomic | locking, see ADR 0005). Extension point: a Redis/Lua flash-sale strategy
@@ -20,7 +22,7 @@ interface StockStrategy
     /**
      * @param  array<string, int>  $quantities  product_id => quantity, already sorted by product_id ascending
      *
-     * @throws \Modules\Inventory\Exceptions\OutOfStock for the first insufficient product in ascending product_id order
+     * @throws OutOfStock for the first insufficient product in ascending product_id order
      */
     public function reserve(array $quantities): void;
 }

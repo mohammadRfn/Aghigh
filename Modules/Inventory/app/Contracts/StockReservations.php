@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Inventory\Contracts;
 
 use DateTimeInterface;
+use Modules\Shared\Contracts\ProblemException;
 
 /**
  * The only Inventory surface other modules may call. Ordering reserves inside its own order
@@ -20,7 +21,7 @@ interface StockReservations
      *
      * @param  array<string, int>  $quantities  product_id => quantity (>= 1)
      *
-     * @throws \Modules\Shared\Contracts\ProblemException 409 "out-of-stock" with product_ids = [first insufficient product]
+     * @throws ProblemException 409 "out-of-stock" with product_ids = [first insufficient product]
      */
     public function reserve(string $orderId, array $quantities, DateTimeInterface $expiresAt): void;
 
