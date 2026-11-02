@@ -11,6 +11,7 @@ use Modules\Catalog\Http\Middleware\AdminHeaders;
 use Modules\Identity\Http\Middleware\RequireOrigin;
 use Modules\Shared\Exceptions\ProblemDetails;
 use Modules\Shared\Http\Middleware\AssignRequestId;
+use Modules\Shared\Http\Middleware\NoStore;
 use Modules\Shared\Http\Middleware\SecurityHeaders;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -37,6 +38,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->prependToPriorityList(AuthenticatesRequests::class, RequireOrigin::class);
         // Catalog admin responses (including 401/403) must carry private, no-store: wrap auth.
         $middleware->prependToPriorityList(AuthenticatesRequests::class, AdminHeaders::class);
+        // Same for Inventory admin (and any route using NoStore): 401/403 must be private, no-store.
+        $middleware->prependToPriorityList(AuthenticatesRequests::class, NoStore::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

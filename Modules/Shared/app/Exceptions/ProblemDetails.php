@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Modules\Shared\Contracts\ProblemException;
+use Modules\Shared\Contracts\ProblemHeaders;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Throwable;
@@ -55,6 +56,9 @@ final class ProblemDetails
             $detail = $e->getMessage();
             $slug = $e->problemType();
             $extra = $e->problemExtensions();
+            if ($e instanceof ProblemHeaders) {
+                $headers = $e->problemHeaders();
+            }
         } elseif ($e instanceof ValidationException) {
             $status = $e->status;
             $detail = 'The request contains invalid fields.';
