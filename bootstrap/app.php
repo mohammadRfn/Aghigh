@@ -40,6 +40,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->prependToPriorityList(AuthenticatesRequests::class, AdminHeaders::class);
         // Same for Inventory admin (and any route using NoStore): 401/403 must be private, no-store.
         $middleware->prependToPriorityList(AuthenticatesRequests::class, NoStore::class);
+        // API only: there is no "login" web route. Laravel's default guest redirect calls route('login'),
+        // which turned a missing token without an Accept header into a 500 instead of a 401.
+        $middleware->redirectGuestsTo(null);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

@@ -22,17 +22,18 @@ final class Race
 {
     /**
      * @param  list<list<int|string>>  $arguments  extra command-line arguments, one list per worker
+     * @param  array<string, string>  $environment  extra environment variables for every worker
      * @return list<array<string, mixed>> each worker's JSON result, in worker order
      */
-    public static function run(string $script, array $arguments, int $timeoutSeconds = 120): array
+    public static function run(string $script, array $arguments, int $timeoutSeconds = 120, array $environment = []): array
     {
         $workers = count($arguments);
         $directory = sys_get_temp_dir().'/aghigh-race-'.bin2hex(random_bytes(8));
         mkdir($directory, 0700);
 
-        $running = Process::pool(function (Pool $pool) use ($arguments, $script, $directory, $timeoutSeconds): void {
+        $running = Process::pool(function (Pool $pool) use ($arguments, $script, $directory, $timeoutSeconds, $environment): void {
             foreach (array_values($arguments) as $index => $extra) {
-                $pool->as((string) $index)->path(base_path())->timeout($timeoutSeconds)
+                $pool->as((string) $index)->path(base_path())->timeout($timeoutSeconds)->env($environment)
                     ->command(['php', $script, $directory, (string) $index, ...array_map(strval(...), $extra)]);
             }
         })->start();
