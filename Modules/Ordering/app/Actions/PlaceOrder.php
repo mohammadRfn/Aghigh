@@ -17,6 +17,7 @@ use Modules\Ordering\Exceptions\OrderingProblem;
 use Modules\Ordering\Http\Resources\OrderResource;
 use Modules\Ordering\Models\Order;
 use Modules\Ordering\Services\IdempotencyCache;
+use Modules\Ordering\Services\OrderSaga;
 use Modules\Ordering\Services\OrderStateMachine;
 
 /**
@@ -24,6 +25,7 @@ use Modules\Ordering\Services\OrderStateMachine;
  *   SET LOCAL lock_timeout (idempotency) -> INSERT idempotency row ON CONFLICT DO NOTHING
  *   -> SET LOCAL lock_timeout (normal) -> price items (ProductPricing, server-side)
  *   -> create order (pending) -> StockReservations::reserve -> transition to reserved (+ outbox OrderReserved)
+ *   -> queue the payment saga (afterCommit: pushed only if this transaction commits, ADR 0007)
  *   -> complete the idempotency row with the response.
  * Any failure rolls everything back and stores nothing; a retry executes again.
  * A concurrent duplicate blocks on the unique (user_id, key) index; after the first commits it replays
@@ -38,6 +40,7 @@ final class PlaceOrder
         private readonly StockReservations $stock,
         private readonly OrderStateMachine $machine,
         private readonly IdempotencyCache $cache,
+        private readonly OrderSaga $saga,
     ) {}
 
     /** @param list<array{product_id: string, quantity: int}> $items */
@@ -99,6 +102,7 @@ final class PlaceOrder
         }
         $this->stock->reserve($order->id, $quantities, $order->expires_at ?? $now); // throws 409 out-of-stock -> full rollback
         $this->machine->transition($order, OrderStatus::Reserved);               // conditional UPDATE + outbox OrderReserved
+        $this->saga->start($order->id);                                          // Task 6: chain queued after COMMIT only
 
         $order->load('items');
         $body = ['data' => (new OrderResource($order))->resolve()];

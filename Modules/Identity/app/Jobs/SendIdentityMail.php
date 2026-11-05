@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Modules\Identity\Mail\IdentityMail;
 use Modules\Identity\Models\User;
+use Modules\Shared\Queue\Queues;
 use Throwable;
 
 final class SendIdentityMail implements ShouldQueue
@@ -20,11 +21,13 @@ final class SendIdentityMail implements ShouldQueue
 
     public int $tries = 4;
 
+    public int $maxExceptions = 3;
+
     public int $timeout = 30;
 
     public function __construct(public readonly string $mailId)
     {
-        $this->onQueue('default');
+        $this->onQueue(Queues::NOTIFICATIONS); // Task 6: mail never competes with the orders queue
         $this->afterCommit();
     }
 

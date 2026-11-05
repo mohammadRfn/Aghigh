@@ -22,6 +22,8 @@ use Modules\Ordering\Enums\OrderStatus;
  * @property string $currency
  * @property int $version
  * @property CarbonImmutable|null $expires_at
+ * @property CarbonImmutable|null $confirmed_at saga pivot (stock committed), set by OrderStateMachine::markConfirmed()
+ * @property CarbonImmutable|null $notified_at set by OrderStateMachine::markNotified()
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  * @property-read Collection<int, OrderItem> $items
@@ -37,6 +39,8 @@ final class Order extends Model
         'total_minor' => 'integer',
         'version' => 'integer',
         'expires_at' => 'immutable_datetime',
+        'confirmed_at' => 'immutable_datetime',
+        'notified_at' => 'immutable_datetime',
         'created_at' => 'immutable_datetime',
         'updated_at' => 'immutable_datetime',
     ];

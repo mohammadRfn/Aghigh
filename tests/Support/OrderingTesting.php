@@ -17,7 +17,9 @@ final class OrderingTesting
     public static function configure(): void
     {
         CatalogTesting::configure();
-        config(['inventory.strategy' => 'atomic', 'inventory.naive_delay_ms' => 0]);
+        // Task 6: POST /orders now queues the payment saga; with the sync queue it would run inline and
+        // change the state these tests assert. Saga tests switch it back on (SagaTesting::configure()).
+        config(['inventory.strategy' => 'atomic', 'inventory.naive_delay_ms' => 0, 'ordering.saga.enabled' => false]);
     }
 
     /** @param array<string, mixed> $attributes */

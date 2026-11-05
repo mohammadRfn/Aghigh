@@ -37,7 +37,7 @@ migrate: ## Run migrations as the DDL role, directly against Postgres
 > @$(DC) exec -e DB_HOST=postgres -e DB_USERNAME=$(DB_MIGRATOR_USER) -e DB_PASSWORD=$(DB_MIGRATOR_PASSWORD) app php artisan migrate --force
 
 test: ## Run the test suite (sqlite in memory; never touches Postgres)
-> $(DC) exec -e DB_CONNECTION=sqlite -e DB_DATABASE=:memory: -e CACHE_STORE=array -e CACHE_LIMITER=array -e QUEUE_CONNECTION=sync -e SESSION_DRIVER=array -e LOG_CHANNEL=null app php artisan test --testsuite=Unit,Feature,Arch
+> $(DC) exec -e APP_ENV=testing -e DB_CONNECTION=sqlite -e DB_DATABASE=:memory: -e CACHE_STORE=array -e CACHE_LIMITER=array -e QUEUE_CONNECTION=sync -e SESSION_DRIVER=array -e LOG_CHANNEL=null app php artisan test --testsuite=Unit,Feature,Arch
 
 lint: ## Check code style (Pint)
 > $(DC) exec app ./vendor/bin/pint --test

@@ -6,6 +6,7 @@ namespace Modules\Ordering\Services;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
+use LogicException;
 use Modules\Ordering\Enums\OrderStatus;
 use Modules\Ordering\Exceptions\OrderingProblem;
 use Modules\Ordering\Models\Order;
@@ -16,6 +17,7 @@ use Modules\Shared\Outbox\Outbox;
  * then applies `UPDATE orders SET status = ?, version = version + 1 WHERE id = ? AND status = ?`:
  * rows affected decides the winner of concurrent transitions (cancel vs pay, cancel vs expire).
  * The outbox event is written in the same transaction. Anything else is 409 "invalid-order-transition".
+ * Task 6 adds the saga markers confirmed_at / notified_at: the only other writes to an order row.
  */
 final class OrderStateMachine
 {
@@ -55,5 +57,48 @@ final class OrderStateMachine
 
             return $order;
         });
+    }
+
+    /**
+     * Saga pivot: paid and not yet confirmed -> confirmed_at = now + outbox OrderConfirmed. Must run in
+     * the transaction that commits the stock. Returns false when another delivery confirmed first.
+     */
+    public function markConfirmed(Order $order): bool
+    {
+        if (DB::transactionLevel() < 1) {
+            throw new LogicException('markConfirmed() must run inside the transaction that commits the stock.');
+        }
+        $now = CarbonImmutable::now();
+        $affected = DB::table('orders')
+            ->where('id', $order->id)
+            ->where('status', OrderStatus::Paid->value)
+            ->whereNull('confirmed_at')
+            ->update(['confirmed_at' => $now, 'version' => DB::raw('version + 1'), 'updated_at' => $now]);
+        if ($affected !== 1) {
+            return false;
+        }
+        $this->outbox->record('order', $order->id, 'OrderConfirmed', [
+            'order_id' => $order->id,
+            'occurred_at' => $now->toIso8601ZuluString('microsecond'),
+        ]);
+        $order->forceFill(['confirmed_at' => $now, 'version' => $order->version + 1, 'updated_at' => $now])->syncOriginal();
+
+        return true;
+    }
+
+    /** Confirmation handed to the notifications queue; false when it already was. */
+    public function markNotified(Order $order): bool
+    {
+        $now = CarbonImmutable::now();
+        $affected = DB::table('orders')
+            ->where('id', $order->id)
+            ->whereNotNull('confirmed_at')
+            ->whereNull('notified_at')
+            ->update(['notified_at' => $now, 'updated_at' => $now]);
+        if ($affected === 1) {
+            $order->forceFill(['notified_at' => $now, 'updated_at' => $now])->syncOriginal();
+        }
+
+        return $affected === 1;
     }
 }

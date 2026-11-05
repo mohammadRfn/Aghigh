@@ -8,8 +8,10 @@ use Illuminate\Contracts\Foundation\Application;
 use InvalidArgumentException;
 use Modules\Inventory\Console\SeedStock;
 use Modules\Inventory\Console\SetStock;
+use Modules\Inventory\Contracts\StockAudit;
 use Modules\Inventory\Contracts\StockReservations;
 use Modules\Inventory\Contracts\StockStrategy;
+use Modules\Inventory\Services\StockAuditService;
 use Modules\Inventory\Services\StockReservationService;
 use Modules\Inventory\Strategies\AtomicStockStrategy;
 use Modules\Inventory\Strategies\LockingStockStrategy;
@@ -38,6 +40,7 @@ final class InventoryServiceProvider extends ModuleServiceProvider
         // (the Concurrency workers switch it per process).
         $this->app->bind(StockStrategy::class, fn (Application $app): StockStrategy => self::strategy($app));
         $this->app->bind(StockReservations::class, StockReservationService::class);
+        $this->app->bind(StockAudit::class, StockAuditService::class);
     }
 
     public function boot(): void
