@@ -32,6 +32,13 @@ interface StockReservations
     public function commit(string $orderId): int;
 
     /**
+     * Active reservations of ONE order -> expired; stock goes back to available. Idempotent. Returns rows expired.
+     * Ordering calls it in the same transaction that moves the order reserved -> expired (order first:
+     * the order's conditional UPDATE decides the race against a concurrent payment).
+     */
+    public function expire(string $orderId): int;
+
+    /**
      * Active reservations past expires_at -> expired, stock back to available, at most $limit rows,
      * SKIP LOCKED so several workers can run it. Idempotent.
      *

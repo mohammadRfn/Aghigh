@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Modules\Identity\Jobs\SendIdentityMail;
 use Modules\Identity\Models\User;
+use Modules\Shared\Queue\Queues;
 
 final class IdentityMessages
 {
@@ -18,7 +19,7 @@ final class IdentityMessages
             'id' => $id, 'user_id' => $user->id, 'purpose' => $purpose,
             'reset_id' => $resetId, 'created_at' => now(),
         ]);
-        SendIdentityMail::dispatch($id)->onQueue('default')->afterCommit();
+        SendIdentityMail::dispatch($id)->onQueue(Queues::NOTIFICATIONS)->afterCommit();
     }
 
     public static function resetToken(string $id): string

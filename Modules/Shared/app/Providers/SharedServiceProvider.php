@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Modules\Shared\Providers;
 
-use Illuminate\Console\Scheduling\Schedule;
+use Modules\Shared\Console\QueueDrainTime;
+use Modules\Shared\Console\QueueMetricsCommand;
+use Modules\Shared\Outbox\OutboxEventMap;
 use Nwidart\Modules\Support\ModuleServiceProvider;
 
 class SharedServiceProvider extends ModuleServiceProvider
@@ -24,7 +26,7 @@ class SharedServiceProvider extends ModuleServiceProvider
      *
      * @var string[]
      */
-    // protected array $commands = [];
+    protected array $commands = [QueueMetricsCommand::class, QueueDrainTime::class];
 
     /**
      * Provider classes to register.
@@ -36,13 +38,10 @@ class SharedServiceProvider extends ModuleServiceProvider
         RouteServiceProvider::class,
     ];
 
-    /**
-     * Define module schedules.
-     *
-     * @param  $schedule
-     */
-    // protected function configureSchedules(Schedule $schedule): void
-    // {
-    //     $schedule->command('inspire')->hourly();
-    // }
+    public function register(): void
+    {
+        parent::register();
+        // Filled once at boot by the feature modules, read-only afterwards (safe under Octane).
+        $this->app->singleton(OutboxEventMap::class);
+    }
 }

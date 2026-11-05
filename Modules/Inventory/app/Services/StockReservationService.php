@@ -52,6 +52,11 @@ final class StockReservationService implements StockReservations
         return $this->settle($orderId, ReservationStatus::Committed);
     }
 
+    public function expire(string $orderId): int
+    {
+        return $this->settle($orderId, ReservationStatus::Expired);
+    }
+
     public function releaseExpired(int $limit): array
     {
         $limit = max(1, min($limit, 10_000));

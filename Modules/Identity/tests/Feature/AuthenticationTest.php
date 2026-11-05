@@ -126,12 +126,12 @@ it('renders limiter errors as problem json with Retry-After', function (): void 
     $this->postJson('/api/v1/auth/login', $data)->assertStatus(429)->assertHeader('Content-Type', 'application/problem+json')->assertHeader('Retry-After')->assertJsonPath('status', 429);
 });
 
-it('sends an outbox message idempotently on the default queue', function (): void {
+it('sends an outbox message idempotently on the notifications queue', function (): void {
     $user = User::factory()->unverified()->create();
     app(IdentityMessages::class)->queue($user, 'verify');
     $id = DB::table('identity_mail_outbox')->value('id');
     $job = new SendIdentityMail($id);
-    expect($job->queue)->toBe('default')->and($job->afterCommit)->toBeTrue()->and($job->timeout)->toBeLessThan(90);
+    expect($job->queue)->toBe('notifications')->and($job->afterCommit)->toBeTrue()->and($job->timeout)->toBeLessThan((int) config('queue.connections.redis.retry_after'));
     $job->handle();
     $job->handle();
     Mail::assertSent(IdentityMail::class, 1);

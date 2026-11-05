@@ -70,7 +70,8 @@ return [
             'driver' => 'redis',
             'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
             'queue' => env('REDIS_QUEUE', 'default'),
-            'retry_after' => (int) env('REDIS_QUEUE_RETRY_AFTER', 90),
+            // Must exceed every job timeout (tests/Feature/QueueTopologyTest.php enforces it).
+            'retry_after' => (int) env('REDIS_QUEUE_RETRY_AFTER', 120),
             'block_for' => null,
             'after_commit' => false,
         ],
@@ -103,6 +104,11 @@ return [
     | connection and table which has been defined by your application.
     |
     */
+
+    // Job locks (WithoutOverlappingOnState, ShouldBeUnique::uniqueVia) live on a NON-evicting store.
+    'locks' => [
+        'store' => env('QUEUE_LOCK_STORE', 'state'),
+    ],
 
     'batching' => [
         'database' => env('DB_CONNECTION', 'sqlite'),

@@ -4,45 +4,42 @@ declare(strict_types=1);
 
 namespace Modules\Ordering\Providers;
 
-use Illuminate\Console\Scheduling\Schedule;
+use Modules\Ordering\Console\VerifyInvariants;
+use Modules\Ordering\Events\OrderCancelled;
+use Modules\Ordering\Events\OrderConfirmed;
+use Modules\Ordering\Events\OrderExpired;
+use Modules\Ordering\Events\OrderFulfilled;
+use Modules\Ordering\Events\OrderPaid;
+use Modules\Ordering\Events\OrderReserved;
+use Modules\Shared\Outbox\OutboxEventMap;
 use Nwidart\Modules\Support\ModuleServiceProvider;
 
 class OrderingServiceProvider extends ModuleServiceProvider
 {
-    /**
-     * The name of the module.
-     */
     protected string $name = 'Ordering';
 
-    /**
-     * The lowercase version of the module name.
-     */
     protected string $nameLower = 'ordering';
 
-    /**
-     * Command classes to register.
-     *
-     * @var string[]
-     */
-    // protected array $commands = [];
+    /** @var string[] */
+    protected array $commands = [VerifyInvariants::class];
 
-    /**
-     * Provider classes to register.
-     *
-     * @var string[]
-     */
+    /** @var string[] */
     protected array $providers = [
         EventServiceProvider::class,
         RouteServiceProvider::class,
     ];
 
-    /**
-     * Define module schedules.
-     *
-     * @param  $schedule
-     */
-    // protected function configureSchedules(Schedule $schedule): void
-    // {
-    //     $schedule->command('inspire')->hourly();
-    // }
+    public function boot(): void
+    {
+        parent::boot();
+        // Outbox type => event published by the relay (at-least-once; payload ids only).
+        $this->app->make(OutboxEventMap::class)->register([
+            'OrderReserved' => OrderReserved::class,
+            'OrderPaid' => OrderPaid::class,
+            'OrderConfirmed' => OrderConfirmed::class,
+            'OrderFulfilled' => OrderFulfilled::class,
+            'OrderCancelled' => OrderCancelled::class,
+            'OrderExpired' => OrderExpired::class,
+        ]);
+    }
 }

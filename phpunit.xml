@@ -47,5 +47,12 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <!-- Task 6: deterministic, instant fake gateway unless a test asks otherwise -->
+        <env name="PAYMENT_FAKE_LATENCY_MIN_MS" value="0"/>
+        <env name="PAYMENT_FAKE_LATENCY_MAX_MS" value="0"/>
+        <env name="PAYMENT_FAKE_FAILURE_RATE" value="0"/>
+        <env name="PAYMENT_FAKE_TIMEOUT_RATE" value="0"/>
+        <env name="PAYMENT_FAKE_TIMEOUT_MS" value="0"/>
+        <env name="PAYMENT_WEBHOOK_SECRET" value="test-webhook-secret"/>
     </php>
 </phpunit>

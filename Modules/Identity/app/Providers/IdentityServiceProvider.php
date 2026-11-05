@@ -12,9 +12,11 @@ use Modules\Identity\Auth\JwtGuard;
 use Modules\Identity\Console\JwtKeys;
 use Modules\Identity\Console\PruneTokens;
 use Modules\Identity\Contracts\CurrentUser;
+use Modules\Identity\Contracts\UserDirectory;
 use Modules\Identity\Models\User;
 use Modules\Identity\Services\SecurityLimits;
 use Modules\Identity\Services\Tokens;
+use Modules\Identity\Services\UserDirectoryService;
 use Nwidart\Modules\Support\ModuleServiceProvider;
 
 final class IdentityServiceProvider extends ModuleServiceProvider
@@ -30,6 +32,7 @@ final class IdentityServiceProvider extends ModuleServiceProvider
     public function register(): void
     {
         parent::register();
+        $this->app->bind(UserDirectory::class, UserDirectoryService::class);
         $this->app->scoped(CurrentUser::class, static function (): CurrentUser {
             $user = request()->user('api');
             if (! $user instanceof User) {

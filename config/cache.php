@@ -22,6 +22,10 @@ return [
     // Rate limiter counters live on the non-evicting state Redis (tests override with array).
     'limiter' => env('CACHE_LIMITER', 'state'),
 
+    // Scheduler mutexes (onOneServer, withoutOverlapping): read by the console kernel as
+    // cache.schedule_store (Laravel 13 also honours SCHEDULE_CACHE_DRIVER). Never the evicting cache.
+    'schedule_store' => env('SCHEDULE_CACHE_DRIVER', 'state'),
+
     /*
     |--------------------------------------------------------------------------
     | Cache Stores
