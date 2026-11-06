@@ -58,7 +58,12 @@ final class PlaceOrder
         }
 
         // Business limit, not the HTTP limiter: counted in Redis before (and independent of) the transaction.
-        $this->budget->consume($userId);
+        // A cache miss is not proof of a new attempt: a completed idempotency row means a replay (answered from the
+        // database inside execute()), and replays are free. Read outside the transaction, like the budget itself.
+        $isReplay = DB::table('idempotency_keys')->where('user_id', $userId)->where('key', $key)->where('status', 'completed')->exists();
+        if (! $isReplay) {
+            $this->budget->consume($userId);
+        }
 
         try {
             $placement = DB::transaction(fn (): OrderPlacement => $this->execute($userId, $key, $requestHash, $items));

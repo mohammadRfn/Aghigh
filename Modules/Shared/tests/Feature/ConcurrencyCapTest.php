@@ -3,12 +3,12 @@
 declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Route;
-use Modules\Identity\Models\User;
 use Modules\Shared\Contracts\ConcurrencyLimiter;
 use Modules\Shared\RateLimiting\InMemoryConcurrencyLimiter;
+use Tests\Support\Actors;
 use Tests\Support\CatalogTesting;
-use Tests\Support\IdentityTesting;
 use Tests\Support\RateLimitTesting;
 
 uses(RefreshDatabase::class);
@@ -16,7 +16,7 @@ uses(RefreshDatabase::class);
 beforeEach(function (): void {
     CatalogTesting::configure();
     RateLimitTesting::exact(concurrency: 1);
-    Route::middleware(['api', 'auth:api', 'concurrency.cap:orders'])->post('/api/v1/_t/cap', function (): \Illuminate\Http\JsonResponse {
+    Route::middleware(['api', 'auth:api', 'concurrency.cap:orders'])->post('/api/v1/_t/cap', function (): JsonResponse {
         // Report how many slots are held WHILE the request is inside the cap.
         return response()->json(['in_flight' => app(ConcurrencyLimiter::class)->inFlight('cc-orders|user:'.request()->user('api')->getAuthIdentifier())]);
     });
@@ -30,10 +30,10 @@ it('holds exactly one slot during the request and releases it afterwards', funct
 });
 
 it('answers 429 concurrency-limit-exceeded while another request of the same user is in flight', function (): void {
-    $user = User::factory()->create(['role' => 'customer', 'email_verified_at' => now()]);
-    $token = IdentityTesting::access($user);
+    $actor = Actors::user();
+    $token = $actor['token'];
     // Another request of the same user is "in flight": its slot is held by a different member id.
-    expect(RateLimitTesting::memorySemaphore()->acquire('cc-orders|user:'.$user->id, 'other-request', 1, 30_000))->toBeTrue();
+    expect(RateLimitTesting::memorySemaphore()->acquire('cc-orders|user:'.$actor['id'], 'other-request', 1, 30_000))->toBeTrue();
 
     $response = $this->withToken($token)->postJson('/api/v1/_t/cap')->assertStatus(429)
         ->assertHeader('Retry-After')->assertHeader('RateLimit-Limit', '1')->assertHeader('RateLimit-Remaining', '0');

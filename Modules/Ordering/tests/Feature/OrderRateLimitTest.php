@@ -9,13 +9,13 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
-use Modules\Identity\Models\User;
 use Modules\Ordering\Http\Middleware\RequireIdempotencyKey;
+use Modules\Shared\Contracts\ProblemException;
 use Modules\Shared\Events\RateLimitHit;
 use Modules\Shared\Exceptions\RateLimitExceeded;
 use Modules\Shared\Http\Middleware\ConcurrencyCap;
 use Modules\Shared\Http\Middleware\ThrottleSliding;
-use Tests\Support\IdentityTesting;
+use Tests\Support\Actors;
 use Tests\Support\OrderingTesting;
 use Tests\Support\RateLimitTesting;
 
@@ -28,14 +28,15 @@ beforeEach(function (): void {
 
 function orderUser(): array
 {
-    $user = User::factory()->create(['role' => 'customer', 'email_verified_at' => now()]);
+    $actor = Actors::user();
 
-    return [(string) $user->id, IdentityTesting::access($user)];
+    return [$actor['id'], $actor['token']];
 }
 
 it('orders the middleware: per-IP limiter -> auth -> per-user limiter -> concurrency cap -> idempotency', function (): void {
     $route = Route::getRoutes()->getByName('api.v1.ordering.orders.store');
     $resolved = array_values(app(Router::class)->gatherRouteMiddleware($route)); // aliases expanded, priority applied
+    $auth = in_array('auth:api', $resolved, true) ? 'auth:api' : Authenticate::class.':api'; // alias is expanded only after the kernel ran
     $position = function (string $exact) use ($resolved): int {
         $index = array_search($exact, $resolved, true);
         expect($index)->not->toBeFalse("middleware {$exact} missing in ".implode(', ', $resolved));
@@ -43,8 +44,8 @@ it('orders the middleware: per-IP limiter -> auth -> per-user limiter -> concurr
         return (int) $index;
     };
 
-    expect($position(ThrottleSliding::class.':orders-ip'))->toBeLessThan($position(Authenticate::class.':api'))
-        ->and($position(Authenticate::class.':api'))->toBeLessThan($position(ThrottleSliding::class.':orders'))
+    expect($position(ThrottleSliding::class.':orders-ip'))->toBeLessThan($position($auth))
+        ->and($position($auth))->toBeLessThan($position(ThrottleSliding::class.':orders'))
         ->and($position(ThrottleSliding::class.':orders'))->toBeLessThan($position(ConcurrencyCap::class.':orders'))
         ->and($position(ConcurrencyCap::class.':orders'))->toBeLessThan($position(RequireIdempotencyKey::class));
 });
@@ -55,17 +56,17 @@ it('answers 429 before auth from a hammering IP and never stores an Idempotency-
     $product = OrderingTesting::product(10, ['price_minor' => 100]);
     $items = ['items' => [['product_id' => $product, 'quantity' => 1]]];
 
-    $this->withToken($token)->postJson('/api/v1/orders', $items, ['Idempotency-Key' => 'first-key-0001'])->assertCreated()->assertHeader('RateLimit-Remaining', '0');
-    $response = $this->withToken($token)->postJson('/api/v1/orders', $items, ['Idempotency-Key' => 'second-key-0002'])->assertStatus(429);
+    $this->withToken($token)->postJson('/api/v1/orders', $items, ['Idempotency-Key' => 'first-key-00000001'])->assertCreated()->assertHeader('RateLimit-Remaining', '0');
+    $response = $this->withToken($token)->postJson('/api/v1/orders', $items, ['Idempotency-Key' => 'second-key-00000002'])->assertStatus(429);
 
     expect($response->json('type'))->toEndWith('/problems/too-many-requests')
-        ->and(DB::table('idempotency_keys')->where('key', 'second-key-0002')->exists())->toBeFalse()
+        ->and(DB::table('idempotency_keys')->where('key', 'second-key-00000002')->exists())->toBeFalse()
         ->and(DB::table('idempotency_keys')->count())->toBe(1)
         ->and(DB::table('orders')->count())->toBe(1);
 
     // The same key is still usable once the limiter allows the request again.
     RateLimitTesting::exact(['orders-ip' => 100]);
-    $this->withToken($token)->postJson('/api/v1/orders', $items, ['Idempotency-Key' => 'second-key-0002'])->assertCreated();
+    $this->withToken($token)->postJson('/api/v1/orders', $items, ['Idempotency-Key' => 'second-key-00000002'])->assertCreated();
 });
 
 it('rejects with 429 from the per-user sliding limiter without touching idempotency rows', function (): void {
@@ -104,7 +105,7 @@ it('business limit: an attempt rejected with 409 out-of-stock DOES consume budge
 
     foreach (range(1, 2) as $_) {
         $error = OrderingTesting::thrown(fn () => OrderingTesting::place($userId, OrderingTesting::key(), [['product_id' => $product, 'quantity' => 1]]));
-        expect($error)->toBeInstanceOf(\Modules\Shared\Contracts\ProblemException::class)->and($error->problemStatus())->toBe(409);
+        expect($error)->toBeInstanceOf(ProblemException::class)->and($error->problemStatus())->toBe(409);
     }
     $third = OrderingTesting::thrown(fn () => OrderingTesting::place($userId, OrderingTesting::key(), [['product_id' => $product, 'quantity' => 1]]));
     expect($third)->toBeInstanceOf(RateLimitExceeded::class)->and($third->problemType())->toBe('orders-per-minute-exceeded');

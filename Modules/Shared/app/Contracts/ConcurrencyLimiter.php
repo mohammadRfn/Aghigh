@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Modules\Shared\Contracts;
 
+use Modules\Shared\RateLimiting\LimiterBackendUnavailable;
+
 /**
  * Semaphore of in-flight requests per key. A slot is owned by `member` (the request id) and expires
  * after `ttlMs` so a crashed worker can never leak it forever. Release is idempotent and only removes
  * the caller's own slot.
  *
- * @throws \Modules\Shared\RateLimiting\LimiterBackendUnavailable when the backend cannot answer
+ * @throws LimiterBackendUnavailable when the backend cannot answer
  */
 interface ConcurrencyLimiter
 {

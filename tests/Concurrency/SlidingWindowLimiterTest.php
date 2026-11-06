@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Redis;
+use Modules\Shared\RateLimiting\LimiterBackendUnavailable;
 use Modules\Shared\RateLimiting\RedisSlidingWindowLimiter;
 use Tests\Support\Race;
 use Tests\Support\RateLimitTesting;
@@ -78,5 +79,5 @@ it('recovers from NOSCRIPT after SCRIPT FLUSH by falling back to EVAL', function
 it('wraps a dead connection in LimiterBackendUnavailable so fail modes apply', function (): void {
     config(['database.redis.dead' => ['host' => '127.0.0.1', 'port' => 1, 'database' => 0, 'timeout' => 0.2]]);
     $dead = new RedisSlidingWindowLimiter(app('redis'), 'dead');
-    expect(fn () => $dead->attempt('x', 1, 1))->toThrow(\Modules\Shared\RateLimiting\LimiterBackendUnavailable::class);
+    expect(fn () => $dead->attempt('x', 1, 1))->toThrow(LimiterBackendUnavailable::class);
 });

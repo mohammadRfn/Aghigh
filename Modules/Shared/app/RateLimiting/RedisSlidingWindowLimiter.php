@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Shared\RateLimiting;
 
 use Illuminate\Contracts\Redis\Factory;
+use Illuminate\Redis\Connections\Connection;
 use Illuminate\Support\Str;
 use Modules\Shared\Contracts\SlidingWindowLimiter;
 use Throwable;
@@ -57,7 +58,7 @@ final class RedisSlidingWindowLimiter implements SlidingWindowLimiter
         return LuaScripts::KEY_PREFIX.'sw:'.$key;
     }
 
-    private function connection(): \Illuminate\Redis\Connections\Connection
+    private function connection(): Connection
     {
         try {
             return $this->redis->connection($this->connection);

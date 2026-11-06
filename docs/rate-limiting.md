@@ -14,7 +14,7 @@ document are **configuration, not measurements**; anything that needs a benchmar
 
 HTTP limiter vs business limit: the HTTP `orders` limiter counts `GET /orders` as much as `POST /orders`
 and counts idempotent replays; it is about request volume. The business limit counts only genuine new
-attempts: a replay of an `Idempotency-Key` is answered from the cache before the budget is touched, so
+attempts: a replay of an `Idempotency-Key` is answered from the cache, or from the completed `idempotency_keys` row on a cache miss, before the budget is touched, so
 retries of a timed-out call are free. The budget is consumed in Redis **outside** the DB transaction, so an
 attempt that rolls back (409 `out-of-stock`, 409 `idempotency-in-progress`) **does** consume budget: it was an
 attempt and it did cost a transaction. Both decisions are tested in `OrderRateLimitTest`.

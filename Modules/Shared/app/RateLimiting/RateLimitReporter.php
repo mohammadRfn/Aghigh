@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Log\LogManager;
 use Modules\Shared\Events\RateLimitBackendFailed;
 use Modules\Shared\Events\RateLimitHit;
+use Psr\Log\LoggerInterface;
 use Throwable;
 
 /**
@@ -64,7 +65,7 @@ final class RateLimitReporter
     }
 
     /** Resolved per call so a test (or a config reload under Octane) can swap the channel. */
-    private function security(): \Psr\Log\LoggerInterface
+    private function security(): LoggerInterface
     {
         return $this->log->channel((string) $this->config->get('rate-limits.log.channel', 'security'));
     }

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Tests\Support\CatalogTesting;
 use Tests\Support\RateLimitTesting;
@@ -72,7 +73,7 @@ it('keys broadcasting auth per user AND ip', function (): void {
 });
 
 it('registers the real broadcasting auth route behind the JWT guard and the limiter', function (): void {
-    $route = Route::getRoutes()->match(\Illuminate\Http\Request::create('/api/broadcasting/auth', 'POST'));
+    $route = Route::getRoutes()->match(Request::create('/api/broadcasting/auth', 'POST'));
     $middleware = $route->gatherMiddleware();
     expect($middleware)->toContain('auth:api')->toContain('throttle.sliding:broadcasting-auth')->not->toContain('web');
 });
@@ -100,7 +101,7 @@ it('attaches the real limiters to the documented routes', function (): void {
     foreach ($expect as $name => $middleware) {
         $route = Route::getRoutes()->getByName($name);
         expect($route)->not->toBeNull("route {$name} missing");
-        expect($route->gatherMiddleware())->toContain($middleware, "route {$name}");
+        expect($route->gatherMiddleware())->toContain($middleware);
         foreach (['throttle:login', 'throttle:register', 'throttle:forgot-password'] as $legacy) {
             expect($route->gatherMiddleware())->not->toContain($legacy);
         }

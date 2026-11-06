@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Shared\Contracts;
 
+use Modules\Shared\RateLimiting\LimiterBackendUnavailable;
 use Modules\Shared\RateLimiting\RateLimitResult;
 
 /**
@@ -11,7 +12,7 @@ use Modules\Shared\RateLimiting\RateLimitResult;
  * Implementations: RedisSlidingWindowLimiter (Lua on the `state` connection) and InMemorySlidingWindowLimiter
  * (Feature suite). Both pass the same contract test (tests/Support/SlidingWindowContract.php).
  *
- * @throws \Modules\Shared\RateLimiting\LimiterBackendUnavailable when the backend cannot answer
+ * @throws LimiterBackendUnavailable when the backend cannot answer
  */
 interface SlidingWindowLimiter
 {

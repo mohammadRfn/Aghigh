@@ -1,3 +1,0 @@
-# docs/security.md — update the API4 and API6 rows:
-| API4 Unrestricted Resource Consumption | Named limiters for every public surface (config/rate-limits.php) on state Redis with RateLimit-* headers, per-user sliding log + concurrency cap on orders, business orders-per-minute budget, bounded sorted-set memory, capped lockout, bounded prune batches, job timeout below retry_after. | Traefik-level coarse shield: planned (Task 11). Queue backpressure: Task 6. |
-| API6 Unrestricted Access to Sensitive Business Flows | Enumeration-safe account recovery/registration, per-IP/per-user limits, orders-per-minute business budget that replays cannot bypass, one-use reset tokens and refresh-reuse handling. | Chat message limiter is defined (`chat-messages`) and attached in Task 8. |

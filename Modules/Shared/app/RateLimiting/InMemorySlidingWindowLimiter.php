@@ -44,7 +44,7 @@ final class InMemorySlidingWindowLimiter implements SlidingWindowLimiter
             $retry = max(1, ($entries[0] + $windowMs) - $now);
         }
         $this->log[$key] = $entries;
-        $reset = $entries === [] ? $now + $windowMs : $entries[0] + $windowMs;
+        $reset = $entries[0] + $windowMs; // never empty here: allowed adds one, denied has count >= limit >= 1
 
         return new RateLimitResult($allowed, $limit, max(0, $limit - $count), $retry, $reset, $now);
     }

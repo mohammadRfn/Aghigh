@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\TestResponse;
 use Tests\Support\IdentityTesting;
 use Tests\Support\RateLimitTesting;
 
@@ -14,7 +15,7 @@ beforeEach(function (): void {
     RateLimitTesting::exact(['webhook' => 2]);
 });
 
-function postLimitedWebhook(string $ip): \Illuminate\Testing\TestResponse
+function postLimitedWebhook(string $ip): TestResponse
 {
     $body = json_encode(['id' => 'evt_'.bin2hex(random_bytes(4)), 'type' => 'payment.captured', 'data' => ['order_id' => '00000000-0000-7000-8000-000000000000']], JSON_THROW_ON_ERROR);
     $t = time();

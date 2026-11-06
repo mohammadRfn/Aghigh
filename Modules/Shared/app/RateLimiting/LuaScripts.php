@@ -101,23 +101,29 @@ final class LuaScripts
     {
         $sha = sha1($script);
         try {
-            try {
-                $result = $redis->evalsha($sha, 1, $key, ...$arguments);
-            } catch (Throwable $error) {
-                if (! self::isNoScript($error->getMessage())) {
-                    throw $error;
-                }
-                $result = $redis->eval($script, 1, $key, ...$arguments);
-            }
-            // phpredis reports NOSCRIPT as `false` + last error instead of throwing.
-            if ($result === false && $redis instanceof PhpRedisConnection) {
+            if ($redis instanceof PhpRedisConnection) {
+                // Laravel's PhpRedisConnection::evalsha() expects the script BODY and runs SCRIPT LOAD itself,
+                // so a sha would be compiled as Lua. Talk to the phpredis client: real EVALSHA, EVAL on NOSCRIPT.
                 $client = $redis->client();
-                $last = (string) $client->getLastError();
-                $client->clearLastError();
-                if (! self::isNoScript($last)) {
-                    throw new \RuntimeException('Redis script failed: '.($last !== '' ? $last : 'unknown error'));
+                $params = [$key, ...$arguments];
+                $result = $client->evalSha($sha, $params, 1);
+                if ($result === false) {
+                    $last = (string) $client->getLastError();
+                    $client->clearLastError();
+                    if (! self::isNoScript($last)) {
+                        throw new \RuntimeException('Redis script failed: '.($last !== '' ? $last : 'unknown error'));
+                    }
+                    $result = $client->eval($script, $params, 1);
                 }
-                $result = $redis->eval($script, 1, $key, ...$arguments);
+            } else {
+                try {
+                    $result = $redis->command('evalsha', [$sha, 1, $key, ...$arguments]);
+                } catch (Throwable $error) {
+                    if (! self::isNoScript($error->getMessage())) {
+                        throw $error;
+                    }
+                    $result = $redis->command('eval', [$script, 1, $key, ...$arguments]);
+                }
             }
         } catch (Throwable $error) {
             throw LimiterBackendUnavailable::from($error);

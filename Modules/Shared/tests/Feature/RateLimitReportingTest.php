@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
@@ -43,7 +44,7 @@ it('logs rate_limit_hit on the security channel with fixed fields and a hashed k
 });
 
 it('never logs a plain hash of an email for login keys', function (): void {
-    $key = RateLimitKey::for('auth-login', 'ip+email', \Illuminate\Http\Request::create('/x', 'POST', ['email' => 'Victim@Example.com']));
+    $key = RateLimitKey::for('auth-login', 'ip+email', Request::create('/x', 'POST', ['email' => 'Victim@Example.com']));
     expect($key)->not->toContain('victim')->not->toContain('Victim')
         ->and($key)->not->toContain(hash('sha256', 'victim@example.com'))
         ->and($key)->toContain(RateLimitKey::emailTag('victim@example.com'))

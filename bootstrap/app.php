@@ -20,8 +20,6 @@ use Modules\Shared\Http\Middleware\SecurityHeaders;
  | compose `edge` network (compose.yaml declares its subnet) where only Traefik lives; set it explicitly
  | per deployment. "*" trusts every peer and is only acceptable when the app port is not reachable directly.
  */
-const DEFAULT_TRUSTED_PROXIES = '172.30.0.0/24'; // compose.yaml -> networks.edge.ipam
-
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
@@ -35,8 +33,9 @@ return Application::configure(basePath: dirname(__DIR__))
         ['prefix' => 'api', 'middleware' => ['api', 'auth:api', 'throttle.sliding:broadcasting-auth']],
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $proxies = env('TRUSTED_PROXIES', DEFAULT_TRUSTED_PROXIES);
-        $proxies = is_string($proxies) && trim($proxies) !== '' ? trim($proxies) : DEFAULT_TRUSTED_PROXIES;
+        $default = '172.30.0.0/24'; // compose.yaml -> networks.edge.ipam
+        $proxies = env('TRUSTED_PROXIES', $default);
+        $proxies = is_string($proxies) && trim($proxies) !== '' ? trim($proxies) : $default;
         $middleware->trustProxies(
             at: $proxies === '*' ? '*' : array_values(array_filter(array_map('trim', explode(',', $proxies)))),
             headers: Request::HEADER_X_FORWARDED_FOR | Request::HEADER_X_FORWARDED_HOST
