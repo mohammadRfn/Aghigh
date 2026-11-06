@@ -1,0 +1,22 @@
+# Modules/Identity/tests/Feature/AuthenticationTest.php — replace the test
+# "renders limiter errors as problem json with Retry-After" with this version (new config keys + RateLimit-* headers):
+
+it('renders limiter errors as problem json with Retry-After and RateLimit headers', function (): void {
+    \Tests\Support\RateLimitTesting::exact(['auth-login' => 2]);
+    $data = ['email' => 'missing@example.com', 'password' => 'wrong'];
+    $this->postJson('/api/v1/auth/login', $data)->assertStatus(401)->assertHeader('RateLimit-Remaining', '1');
+    $this->postJson('/api/v1/auth/login', $data)->assertStatus(401)->assertHeader('RateLimit-Remaining', '0');
+    $this->postJson('/api/v1/auth/login', $data)
+        ->assertStatus(429)
+        ->assertHeader('Content-Type', 'application/problem+json')
+        ->assertHeader('Retry-After')
+        ->assertHeader('RateLimit-Limit', '2')
+        ->assertHeader('RateLimit-Remaining', '0')
+        ->assertHeaderMissing('X-RateLimit-Limit')
+        ->assertJsonPath('status', 429);
+    expect($this->postJson('/api/v1/auth/login', $data)->json('type'))->toEndWith('/problems/too-many-requests');
+});
+
+# Any other test that did `config(['identity.rates.login' => N])` (or register / forgot-password) must now call
+#   \Tests\Support\RateLimitTesting::exact(['auth-login' => N]);   // auth-register, auth-forgot-password, ...
+# grep: `grep -rn "identity.rates" Modules tests`

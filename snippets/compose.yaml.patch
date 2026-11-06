@@ -1,0 +1,13 @@
+# compose.yaml: give the edge network a fixed subnet so TRUSTED_PROXIES can name it.
+# Only Traefik and the services it must reach are on `edge`; `backend` stays internal.
+# Replace the `networks:` block at the end of compose.yaml with:
+
+networks:
+  edge:
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+  backend:
+    internal: true
+
+# Then `make up` (recreates the networks; containers must be stopped first: `docker compose --env-file .env.docker down`).

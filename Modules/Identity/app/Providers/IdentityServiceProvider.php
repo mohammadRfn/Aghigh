@@ -14,7 +14,6 @@ use Modules\Identity\Console\PruneTokens;
 use Modules\Identity\Contracts\CurrentUser;
 use Modules\Identity\Contracts\UserDirectory;
 use Modules\Identity\Models\User;
-use Modules\Identity\Services\SecurityLimits;
 use Modules\Identity\Services\Tokens;
 use Modules\Identity\Services\UserDirectoryService;
 use Nwidart\Modules\Support\ModuleServiceProvider;
@@ -55,6 +54,6 @@ final class IdentityServiceProvider extends ModuleServiceProvider
 
             return $guard;
         });
-        SecurityLimits::register();
+        // Task 7: auth limiters moved to config/rate-limits.php + Modules\Shared\Providers\RateLimitServiceProvider.
     }
 }

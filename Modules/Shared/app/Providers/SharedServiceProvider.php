@@ -36,6 +36,7 @@ class SharedServiceProvider extends ModuleServiceProvider
     protected array $providers = [
         EventServiceProvider::class,
         RouteServiceProvider::class,
+        RateLimitServiceProvider::class, // Task 7: named limiters, throttle.sliding + concurrency.cap
     ];
 
     public function register(): void

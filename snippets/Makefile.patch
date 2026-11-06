@@ -1,0 +1,10 @@
+# Makefile: the Concurrency suite must use the REAL Lua limiter (phpunit.xml defaults to the in-memory double).
+# Keep RATE_LIMIT_MULTIPLIER at phpunit.xml's 1000: HttpRacesTest fires 8 parallel POST /orders for ONE user and must not
+# hit the per-user limiter or the concurrency cap. Limiter tests set their own exact values in-process. Add -e RATE_LIMIT_SLIDING_DRIVER=redis:
+
+test-int: test-db ## Concurrency suite on real Postgres + Redis (aghigh_test, direct to Postgres, isolated Redis dbs)
+> @$(DC) exec -e APP_ENV=testing -e DB_CONNECTION=pgsql -e DB_HOST=postgres -e DB_DATABASE=aghigh_test -e DB_USERNAME=$(DB_MIGRATOR_USER) -e DB_PASSWORD=$(DB_MIGRATOR_PASSWORD) -e REDIS_DB=10 -e REDIS_CACHE_DB=11 -e REDIS_STATE_DB=12 -e CACHE_LIMITER=state -e RATE_LIMIT_SLIDING_DRIVER=redis -e LOG_CHANNEL=null app php artisan test --testsuite=Concurrency
+
+# Optional helper target:
+verify-proxy: ## Prove TrustProxies against the real Traefik stack (curl, no fake proxy)
+> ./scripts/verify-trusted-proxy.sh

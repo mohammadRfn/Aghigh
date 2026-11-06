@@ -14,7 +14,8 @@ Route::get('inventory/ping', fn () => response()->json([
 ]))->name('inventory.ping');
 
 // NoStore wraps auth so 401/403 answers are private, no-store as well. Rate limiting arrives in Task 7.
-Route::prefix('admin')->middleware([NoStore::class, 'auth:api'])->name('inventory.admin.')->group(function (): void {
+// Task 7: admin limiter (per user, fail closed) after auth.
+Route::prefix('admin')->middleware([NoStore::class, 'auth:api', 'throttle.sliding:admin'])->name('inventory.admin.')->group(function (): void {
     Route::get('inventory/{product}', [AdminInventoryController::class, 'show'])->whereUuid('product')->name('stock.show');
     Route::put('inventory/{product}', [AdminInventoryController::class, 'update'])->whereUuid('product')->name('stock.update');
 });

@@ -14,12 +14,14 @@ use Modules\Catalog\Support\BenchEnvironment;
 
 Route::get('catalog/ping', fn () => response()->json(['module' => 'Catalog', 'status' => 'ok']))->name('catalog.ping');
 
-// No rate limiting in Task 4. Task 7 can attach distinct public/admin groups here.
-Route::get('products', [ProductController::class, 'index'])->name('catalog.products.index');
-Route::get('products/{identifier}', [ProductController::class, 'show'])->name('catalog.products.show');
-Route::get('categories', [CategoryController::class, 'index'])->name('catalog.categories.index');
+// Task 7: public reads are limited per IP and FAIL OPEN (cached, harmless); admin writes per user, fail closed.
+Route::middleware('throttle.sliding:public-catalog')->group(function (): void {
+    Route::get('products', [ProductController::class, 'index'])->name('catalog.products.index');
+    Route::get('products/{identifier}', [ProductController::class, 'show'])->name('catalog.products.show');
+    Route::get('categories', [CategoryController::class, 'index'])->name('catalog.categories.index');
+});
 
-Route::prefix('admin')->middleware([AdminHeaders::class, 'auth:api'])->name('catalog.admin.')->group(function (): void {
+Route::prefix('admin')->middleware([AdminHeaders::class, 'auth:api', 'throttle.sliding:admin'])->name('catalog.admin.')->group(function (): void {
     Route::post('products', [AdminProductController::class, 'store'])->name('products.store');
     Route::patch('products/{id}', [AdminProductController::class, 'update'])->whereUuid('id')->name('products.update');
     Route::get('products/{id}', [AdminProductController::class, 'show'])->whereUuid('id')->name('products.show');

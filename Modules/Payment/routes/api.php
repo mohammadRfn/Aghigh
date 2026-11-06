@@ -14,5 +14,5 @@ Route::get('payment/ping', fn () => response()->json([
 ]))->name('payment.ping');
 
 // Gateway -> Aghigh. Authenticated by the HMAC signature only, deliberately NOT behind auth:api.
-// Rate limiting arrives in Task 7.
-Route::post('payments/webhook', WebhookController::class)->middleware(NoStore::class)->name('payment.webhook');
+// Task 7: generous per-IP limiter (webhook), fail open: the HMAC signature is the real gate.
+Route::post('payments/webhook', WebhookController::class)->middleware([NoStore::class, 'throttle.sliding:webhook'])->name('payment.webhook');
