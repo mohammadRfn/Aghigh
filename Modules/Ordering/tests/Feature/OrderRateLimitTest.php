@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Auth\Middleware\Authenticate;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Routing\Router;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
@@ -95,6 +96,26 @@ it('business limit: replays do not consume the orders-per-minute budget', functi
     expect($response->json('type'))->toEndWith('/problems/orders-per-minute-exceeded')
         ->and(DB::table('idempotency_keys')->where('key', 'replay-key-000003')->exists())->toBeFalse();
     Event::assertDispatched(RateLimitHit::class, fn (RateLimitHit $e): bool => $e->limiter === 'business:orders-per-minute' && $e->driver === 'business');
+});
+
+it('business limit: a replay answered from the database (cache emptied) does not consume budget', function (): void {
+    RateLimitTesting::exact(ordersPerMinute: 2);
+    [, $token] = orderUser();
+    $product = OrderingTesting::product(10, ['price_minor' => 100]);
+    $items = ['items' => [['product_id' => $product, 'quantity' => 1]]];
+
+    $this->withToken($token)->postJson('/api/v1/orders', $items, ['Idempotency-Key' => 'replay-db-key-00001'])->assertCreated();
+    foreach (range(1, 5) as $_) {
+        Cache::store('state')->flush(); // cache miss: the replay comes from idempotency_keys
+        $this->withToken($token)->postJson('/api/v1/orders', $items, ['Idempotency-Key' => 'replay-db-key-00001'])
+            ->assertCreated()->assertHeader('Idempotency-Replayed', 'true');
+    }
+
+    // Only ONE unit of the budget (2) was spent by the first order, so exactly one more order fits.
+    $this->withToken($token)->postJson('/api/v1/orders', $items, ['Idempotency-Key' => 'replay-db-key-00002'])->assertCreated();
+    $response = $this->withToken($token)->postJson('/api/v1/orders', $items, ['Idempotency-Key' => 'replay-db-key-00003'])->assertStatus(429);
+    expect($response->json('type'))->toEndWith('/problems/orders-per-minute-exceeded')
+        ->and(DB::table('orders')->count())->toBe(2);
 });
 
 it('business limit: an attempt rejected with 409 out-of-stock DOES consume budget', function (): void {
