@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Cache\RateLimiter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -15,6 +16,7 @@ beforeEach(function (): void {
 });
 
 it('serves real database rows when either public cache dependency fails', function (string $failed): void {
+    app(RateLimiter::class); // resolve the limiter store BEFORE the Cache facade is mocked below
     $product = Product::factory()->create();
     $state = Cache::store('state');
     $payload = Cache::store('cache');

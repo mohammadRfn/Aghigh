@@ -33,10 +33,5 @@ return [
         'base' => (int) env('AUTH_LOCKOUT_BASE_SECONDS', 30),
         'max' => (int) env('AUTH_LOCKOUT_MAX_SECONDS', 900),
     ],
-    'rates' => [
-        'login' => (int) env('AUTH_LOGIN_RATE', 10),
-        'register' => (int) env('AUTH_REGISTER_RATE', 5),
-        'forgot-password' => (int) env('AUTH_FORGOT_RATE', 5),
-    ],
     'reset_ttl' => (int) env('AUTH_RESET_TTL_MINUTES', 60),
 ];

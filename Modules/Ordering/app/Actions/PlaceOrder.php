@@ -17,6 +17,7 @@ use Modules\Ordering\Exceptions\OrderingProblem;
 use Modules\Ordering\Http\Resources\OrderResource;
 use Modules\Ordering\Models\Order;
 use Modules\Ordering\Services\IdempotencyCache;
+use Modules\Ordering\Services\OrderRateBudget;
 use Modules\Ordering\Services\OrderSaga;
 use Modules\Ordering\Services\OrderStateMachine;
 
@@ -28,6 +29,8 @@ use Modules\Ordering\Services\OrderStateMachine;
  *   -> queue the payment saga (afterCommit: pushed only if this transaction commits, ADR 0007)
  *   -> complete the idempotency row with the response.
  * Any failure rolls everything back and stores nothing; a retry executes again.
+ * Task 7: the business budget (orders per minute per user, OrderRateBudget) is consumed AFTER the idempotency
+ * replay check and OUTSIDE the transaction: replays are free, rollbacks (409 out-of-stock) are not refunded.
  * A concurrent duplicate blocks on the unique (user_id, key) index; after the first commits it replays
  * the stored response, after a rollback it executes itself, after lock_timeout it gets 409 "idempotency-in-progress".
  */
@@ -41,6 +44,7 @@ final class PlaceOrder
         private readonly OrderStateMachine $machine,
         private readonly IdempotencyCache $cache,
         private readonly OrderSaga $saga,
+        private readonly OrderRateBudget $budget,
     ) {}
 
     /** @param list<array{product_id: string, quantity: int}> $items */
@@ -51,6 +55,14 @@ final class PlaceOrder
             self::assertSameRequest($cached['request_hash'], $requestHash);
 
             return new OrderPlacement($cached['status'], $cached['body'], true, isset($cached['body']['data']['id']) ? (string) $cached['body']['data']['id'] : null);
+        }
+
+        // Business limit, not the HTTP limiter: counted in Redis before (and independent of) the transaction.
+        // A cache miss is not proof of a new attempt: a completed idempotency row means a replay (answered from the
+        // database inside execute()), and replays are free. Read outside the transaction, like the budget itself.
+        $isReplay = DB::table('idempotency_keys')->where('user_id', $userId)->where('key', $key)->where('status', 'completed')->exists();
+        if (! $isReplay) {
+            $this->budget->consume($userId);
         }
 
         try {

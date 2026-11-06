@@ -14,21 +14,33 @@ use Modules\Shared\Http\Middleware\AssignRequestId;
 use Modules\Shared\Http\Middleware\NoStore;
 use Modules\Shared\Http\Middleware\SecurityHeaders;
 
+/*
+ | Task 7: the client IP used by every per-IP limiter comes from Request::ip() and therefore from Laravel's
+ | TrustProxies only. Nothing in the app reads X-Forwarded-For by hand. TRUSTED_PROXIES defaults to the
+ | compose `edge` network (compose.yaml declares its subnet) where only Traefik lives; set it explicitly
+ | per deployment. "*" trusts every peer and is only acceptable when the app port is not reachable directly.
+ */
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         commands: __DIR__.'/../routes/console.php',
-        channels: __DIR__.'/../routes/channels.php',
-        health: '/up',
+        health: '/up', // exempt from every limiter: no limiter middleware is attached to it
+    )
+    // Channel authorization uses the stateless JWT guard (never web/session) and the broadcasting-auth limiter
+    // (per user + IP). Echo: authEndpoint '/api/broadcasting/auth'. Task 8 restricts the channels themselves.
+    ->withBroadcasting(
+        __DIR__.'/../routes/channels.php',
+        ['prefix' => 'api', 'middleware' => ['api', 'auth:api', 'throttle.sliding:broadcasting-auth']],
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Behind Traefik: trust forwarded headers only when TRUSTED_PROXIES is set
-        // ("*" or a comma-separated list of IPs/CIDRs). Unset = trust nobody.
-        $proxies = env('TRUSTED_PROXIES');
-
-        if (is_string($proxies) && $proxies !== '') {
-            $middleware->trustProxies(at: $proxies === '*' ? '*' : explode(',', $proxies));
-        }
+        $default = '172.30.0.0/24'; // compose.yaml -> networks.edge.ipam
+        $proxies = env('TRUSTED_PROXIES', $default);
+        $proxies = is_string($proxies) && trim($proxies) !== '' ? trim($proxies) : $default;
+        $middleware->trustProxies(
+            at: $proxies === '*' ? '*' : array_values(array_filter(array_map('trim', explode(',', $proxies)))),
+            headers: Request::HEADER_X_FORWARDED_FOR | Request::HEADER_X_FORWARDED_HOST
+                | Request::HEADER_X_FORWARDED_PORT | Request::HEADER_X_FORWARDED_PROTO,
+        );
 
         // Global, so even unmatched routes (404) get a request id and the headers.
         $middleware->prepend(AssignRequestId::class);
@@ -40,6 +52,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->prependToPriorityList(AuthenticatesRequests::class, AdminHeaders::class);
         // Same for Inventory admin (and any route using NoStore): 401/403 must be private, no-store.
         $middleware->prependToPriorityList(AuthenticatesRequests::class, NoStore::class);
+        // Limiters (throttle.sliding / concurrency.cap) are deliberately NOT in the priority list: the same class
+        // runs pre-auth (per IP) and post-auth (per user), so declared route order is the order (see Ordering routes).
         // API only: there is no "login" web route. Laravel's default guest redirect calls route('login'),
         // which turned a missing token without an Accept header into a 500 instead of a 401.
         $middleware->redirectGuestsTo(null);

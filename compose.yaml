@@ -239,7 +239,10 @@ services:
   # ---- Prometheus/Grafana/Loki services will be added here with `profiles: [observability]`.
 
 networks:
-  edge: {}
+  edge:
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
   backend:
     internal: true
 

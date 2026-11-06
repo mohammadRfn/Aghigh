@@ -24,6 +24,27 @@ Shared (kernel), Identity, Catalog, Inventory, Ordering, Payment, Chat, Notifica
 - Every request has an `X-Request-Id`; it is in the log context and propagates to queued jobs.
 - Money: integer minor units + ISO currency code, never floats. IDs: UUIDv7. See docs/adr/.
 
+## Rate limiting (Task 7)
+- Every limiter is named in `config/rate-limits.php` (env-tunable; values are configuration, not
+  measurements) and attached with `throttle.sliding:{name}`; the per-user concurrency cap is
+  `concurrency.cap:{name}`. Do not use `throttle:` or `RateLimiter::for()` in modules; do not read
+  `X-Forwarded-For` (client IP = `Request::ip()` through TrustProxies, default = compose edge network).
+- Counters live on the `state` Redis. Only `Modules\Shared\RateLimiting` touches limiter keys/Lua
+  (`tests/Arch/RateLimitingBoundaryTest.php`). Drivers: `laravel` (fixed window) for most, `sliding`
+  (Lua sliding log, bounded by `sliding_max_limit`) only for `orders`. Fail mode per limiter: `open`
+  (catalog, webhook) or `closed` (auth, orders, admin -> 503 `rate-limit-unavailable`).
+- Middleware order on protected routes: pre-auth per-IP limiter -> `auth:api` -> per-user limiter ->
+  concurrency cap -> idempotency. A 429 is thrown, so it never stores an Idempotency-Key.
+- 429 = problem+json `too-many-requests` with `Retry-After` + `RateLimit-Limit/Remaining/Reset`
+  (also on 2xx; most restrictive limiter wins; no `X-RateLimit-*`). Every hit logs `rate_limit_hit` on
+  `security` (hashed key, sampled above N/window) and dispatches `Shared\Events\RateLimitHit`.
+- Business limits (e.g. orders per minute per user, `OrderRateBudget`) live in the action after the
+  idempotency replay check, counted in Redis outside the transaction; 409 attempts consume budget.
+- `RATE_LIMIT_MULTIPLIER` scales limits only in local/testing/loadtest (boot fails elsewhere). Feature
+  tests run the in-memory limiter (phpunit.xml, multiplier 1000); limiter tests pin values with
+  `Tests\Support\RateLimitTesting::exact()`. Anything Lua/Redis goes in the Concurrency suite.
+- Docs: `docs/rate-limiting.md`, ADR 0008. Lockout (identity.lockout.*) is a separate mechanism.
+
 ## Redis roles (important)
 - `cache` connection (redis-cache, allkeys-lru): disposable data only (e.g. catalog cache).
 - `default` connection (redis-queue, noeviction, AOF): queues, Horizon, Reverb pub/sub.

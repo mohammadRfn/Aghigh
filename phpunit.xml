@@ -42,6 +42,9 @@
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="CACHE_LIMITER" value="array"/>
+        <env name="RATE_LIMIT_SLIDING_DRIVER" value="memory"/>
+        <env name="RATE_LIMIT_MULTIPLIER" value="1000"/>
+        <env name="TRUSTED_PROXIES" value="172.30.0.0/24"/>
         <env name="LOG_CHANNEL" value="null"/>
         <env name="LOG_SLOW_QUERY_MS" value="0"/>
         <env name="PULSE_ENABLED" value="false"/>

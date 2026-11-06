@@ -14,10 +14,15 @@ Route::get('ordering/ping', fn () => response()->json([
     'status' => 'ok',
 ]))->name('ordering.ping');
 
-// NoStore wraps auth so 401 answers are private, no-store as well. Rate limiting arrives in Task 7.
-Route::middleware([NoStore::class, 'auth:api'])->prefix('orders')->name('ordering.orders.')->group(function (): void {
-    Route::post('', [OrderController::class, 'store'])->middleware(RequireIdempotencyKey::class)->name('store');
-    Route::get('', [OrderController::class, 'index'])->name('index');
-    Route::get('{order}', [OrderController::class, 'show'])->whereUuid('order')->name('show');
-    Route::post('{order}/cancel', [OrderController::class, 'cancel'])->whereUuid('order')->name('cancel');
-});
+// Middleware order (Task 7), asserted by Modules/Ordering/tests/Feature/OrderRateLimitTest.php:
+//   throttle.sliding:orders-ip (pre-auth, per IP) -> auth:api -> throttle.sliding:orders (per user, sliding log)
+//   -> concurrency.cap:orders -> RequireIdempotencyKey. A 429 is thrown before the key middleware runs.
+// NoStore wraps auth so 401 answers are private, no-store as well.
+Route::middleware([NoStore::class, 'throttle.sliding:orders-ip', 'auth:api', 'throttle.sliding:orders'])
+    ->prefix('orders')->name('ordering.orders.')->group(function (): void {
+        Route::post('', [OrderController::class, 'store'])
+            ->middleware(['concurrency.cap:orders', RequireIdempotencyKey::class])->name('store');
+        Route::get('', [OrderController::class, 'index'])->name('index');
+        Route::get('{order}', [OrderController::class, 'show'])->whereUuid('order')->name('show');
+        Route::post('{order}/cancel', [OrderController::class, 'cancel'])->whereUuid('order')->name('cancel');
+    });

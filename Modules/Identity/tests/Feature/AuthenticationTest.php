@@ -13,6 +13,7 @@ use Modules\Identity\Mail\IdentityMail;
 use Modules\Identity\Models\User;
 use Modules\Identity\Services\IdentityMessages;
 use Tests\Support\IdentityTesting;
+use Tests\Support\RateLimitTesting;
 
 uses(RefreshDatabase::class);
 
@@ -118,12 +119,20 @@ it('locks accounts with a growing duration and recovers after the deadline', fun
     expect($user->fresh()->failed_login_count)->toBe(0);
 });
 
-it('renders limiter errors as problem json with Retry-After', function (): void {
-    config(['identity.rates.login' => 2]);
+it('renders limiter errors as problem json with Retry-After and RateLimit headers', function (): void {
+    RateLimitTesting::exact(['auth-login' => 2]);
     $data = ['email' => 'missing@example.com', 'password' => 'wrong'];
-    $this->postJson('/api/v1/auth/login', $data)->assertStatus(401);
-    $this->postJson('/api/v1/auth/login', $data)->assertStatus(401);
-    $this->postJson('/api/v1/auth/login', $data)->assertStatus(429)->assertHeader('Content-Type', 'application/problem+json')->assertHeader('Retry-After')->assertJsonPath('status', 429);
+    $this->postJson('/api/v1/auth/login', $data)->assertStatus(401)->assertHeader('RateLimit-Remaining', '1');
+    $this->postJson('/api/v1/auth/login', $data)->assertStatus(401)->assertHeader('RateLimit-Remaining', '0');
+    $this->postJson('/api/v1/auth/login', $data)
+        ->assertStatus(429)
+        ->assertHeader('Content-Type', 'application/problem+json')
+        ->assertHeader('Retry-After')
+        ->assertHeader('RateLimit-Limit', '2')
+        ->assertHeader('RateLimit-Remaining', '0')
+        ->assertHeaderMissing('X-RateLimit-Limit')
+        ->assertJsonPath('status', 429);
+    expect($this->postJson('/api/v1/auth/login', $data)->json('type'))->toEndWith('/problems/too-many-requests');
 });
 
 it('sends an outbox message idempotently on the notifications queue', function (): void {
