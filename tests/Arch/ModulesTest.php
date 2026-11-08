@@ -50,4 +50,3 @@ arch('Chat does not use Identity models, enums, services or the guard')
 arch('Chat does not use limiter engines or Shared Lua directly')
     ->expect('Modules\\Chat')
     ->not->toUse(['Modules\\Shared\\RateLimiting\\LuaScripts', 'Modules\\Shared\\RateLimiting\\RedisConcurrencyLimiter', 'Modules\\Shared\\RateLimiting\\RedisSlidingWindowLimiter']);
-

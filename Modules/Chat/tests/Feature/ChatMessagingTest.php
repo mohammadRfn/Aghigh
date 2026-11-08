@@ -7,6 +7,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Testing\TestResponse;
 use Modules\Chat\Actions\ClaimNextConversation;
 use Modules\Chat\Actions\SendMessage;
 use Modules\Chat\Events\MessageSent;
@@ -22,7 +23,7 @@ beforeEach(function (): void {
     $this->conversation = $this->withToken($this->customer['token'])->postJson('/api/v1/conversations')->assertCreated()->json('data.id');
 });
 
-function chatPost(object $test, array $user, string $conversation, string $body, ?string $key = null): Illuminate\Testing\TestResponse
+function chatPost(object $test, array $user, string $conversation, string $body, ?string $key = null): TestResponse
 {
     return $test->withToken($user['token'])->postJson("/api/v1/conversations/{$conversation}/messages", [
         'body' => $body, 'client_message_id' => $key ?? ChatTesting::key(),

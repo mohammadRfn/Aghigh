@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Chat\Support;
 
 use Illuminate\Database\QueryException;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 
 final class Sql
@@ -25,7 +26,7 @@ final class Sql
 
     public static function isUniqueViolation(\Throwable $error): bool
     {
-        if ($error instanceof \Illuminate\Database\UniqueConstraintViolationException) {
+        if ($error instanceof UniqueConstraintViolationException) {
             return true;
         }
 

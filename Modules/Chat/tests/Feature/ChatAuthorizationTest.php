@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
+use Illuminate\Testing\TestResponse;
 use Modules\Chat\Actions\ClaimNextConversation;
 use Tests\Support\ChatTesting;
 use Tests\Support\RateLimitTesting;
@@ -71,7 +72,7 @@ it('lists only own (customer) or assigned (agent) conversations; admins see none
 describe('POST /api/broadcasting/auth (the single Task 7 route)', function (): void {
     beforeEach(fn () => ChatTesting::useReverbBroadcaster());
 
-    $auth = function (object $test, ?string $token, string $channel, string $socket = '1234.5678'): Illuminate\Testing\TestResponse {
+    $auth = function (object $test, ?string $token, string $channel, string $socket = '1234.5678'): TestResponse {
         $test->app['auth']->forgetGuards();
         $token === null ? $test->withoutToken() : $test->withToken($token);
 
