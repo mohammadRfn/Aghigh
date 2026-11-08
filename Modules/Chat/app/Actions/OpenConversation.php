@@ -63,6 +63,7 @@ final class OpenConversation
         return [$row, true];
     }
 
+    /** @phpstan-impure reads the current row: never reuse an earlier result */
     private function openFor(string $customerId): ?object
     {
         $row = DB::table('conversations')->where('customer_id', $customerId)->where('status', '<>', ConversationStatus::Closed->value)->first();

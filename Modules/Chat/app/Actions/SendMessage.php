@@ -118,6 +118,7 @@ final class SendMessage
         return [$message, $other === null ? null : (string) $other];
     }
 
+    /** @phpstan-impure reads the current row: never reuse an earlier result */
     private function existing(string $conversationId, string $clientMessageId): ?object
     {
         $row = DB::table('messages')->where('conversation_id', $conversationId)->where('client_message_id', $clientMessageId)->first();

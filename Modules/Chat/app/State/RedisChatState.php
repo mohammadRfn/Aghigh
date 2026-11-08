@@ -66,11 +66,9 @@ final class RedisChatState implements ChatState
         if (! is_array($popped) || $popped === []) {
             return null;
         }
-        foreach ($popped as $member => $score) {
-            return [(string) $member, (int) $score];
-        }
+        $member = array_key_first($popped);
 
-        return null;
+        return $member === null ? null : [(string) $member, (int) $popped[$member]];
     }
 
     public function queueRemove(string $conversationId): void
@@ -82,7 +80,7 @@ final class RedisChatState implements ChatState
     {
         $score = $this->client()->zScore(ChatKeys::SUPPORT_QUEUE, $conversationId);
 
-        return $score === false || $score === null ? null : (int) $score;
+        return is_numeric($score) ? (int) $score : null;
     }
 
     public function queueMembers(int $offset, int $count): array
