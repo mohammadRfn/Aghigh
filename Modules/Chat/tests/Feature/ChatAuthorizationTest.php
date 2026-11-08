@@ -42,7 +42,7 @@ it('hides a conversation from every non-participant with the same 404 (BOLA)', f
 })->with('conversation endpoints');
 
 it('answers 401 to anonymous callers on every chat endpoint', function (string $method, string $path, array $body): void {
-    $response = $this->json($method, "/api/v1/conversations/{$this->conversation}/{$path}", $body)->assertUnauthorized();
+    $response = $this->withoutToken()->json($method, "/api/v1/conversations/{$this->conversation}/{$path}", $body)->assertUnauthorized();
     expect((string) $response->headers->get('Cache-Control'))->toContain('no-store');
 })->with('conversation endpoints');
 
@@ -56,7 +56,7 @@ it('enforces function-level roles', function (): void {
     $this->withToken($this->owner['token'])->postJson('/api/v1/support/queue/claim')->assertForbidden();
     $this->withToken($this->admin['token'])->postJson('/api/v1/support/queue/claim')->assertForbidden();
     $this->withToken($this->owner['token'])->postJson("/api/v1/conversations/{$this->conversation}/release")->assertForbidden();
-    $this->postJson('/api/v1/conversations')->assertUnauthorized();
+    $this->withoutToken()->postJson('/api/v1/conversations')->assertUnauthorized();
     $this->postJson('/api/v1/support/queue/claim')->assertUnauthorized();
     $this->postJson('/api/v1/presence/heartbeat')->assertUnauthorized();
 });
@@ -73,7 +73,7 @@ describe('POST /api/broadcasting/auth (the single Task 7 route)', function (): v
     beforeEach(fn () => ChatTesting::useReverbBroadcaster());
 
     $auth = function (object $test, ?string $token, string $channel, string $socket = '1234.5678'): TestResponse {
-        $test->app['auth']->forgetGuards();
+        app('auth')->forgetGuards();
         $token === null ? $test->withoutToken() : $test->withToken($token);
 
         return $test->postJson('/api/broadcasting/auth', ['socket_id' => $socket, 'channel_name' => $channel]);

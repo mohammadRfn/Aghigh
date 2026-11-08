@@ -68,7 +68,7 @@ final class RedisChatState implements ChatState
         }
         $member = array_key_first($popped);
 
-        return $member === null ? null : [(string) $member, (int) $popped[$member]];
+        return [(string) $member, (int) $popped[$member]];
     }
 
     public function queueRemove(string $conversationId): void

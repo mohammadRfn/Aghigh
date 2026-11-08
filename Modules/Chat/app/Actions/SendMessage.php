@@ -68,6 +68,7 @@ final class SendMessage
         }
 
         $this->unread->incrementFor($id, $otherParty); // after commit, best effort (DB is the truth)
+        $this->unread->forget($id, $actor->id); // the sender just read up to their own message: drop the stale cached counter
 
         return [$message, true];
     }
