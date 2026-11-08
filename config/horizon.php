@@ -12,7 +12,7 @@ use Illuminate\Support\Str;
  * - sum(maxProcesses) + Octane workers + Reverb + scheduler must fit the PgBouncer pool (compose);
  * - sum(maxProcesses + supervisors + master) x memory must fit the horizon container mem_limit.
  */
-$supervisor = static function (string $queue, int $min, int $max, int $timeout, int $maxJobs, int $maxTime): array {
+$supervisor = static function (string $queue, int $min, int $max, int $timeout, int $maxJobs, int $maxTime, int $sleep = 3): array {
     $prefix = 'HORIZON_'.strtoupper($queue).'_';
 
     return [
@@ -24,6 +24,7 @@ $supervisor = static function (string $queue, int $min, int $max, int $timeout, 
         'maxProcesses' => (int) env($prefix.'MAX_PROCESSES', $max),
         'balanceMaxShift' => 1,
         'balanceCooldown' => 3,
+        'sleep' => (int) env($prefix.'SLEEP', $sleep), // seconds between polls of an EMPTY queue
         // Recycle workers: bounded leaks and fresh code without a deploy-time terminate.
         'maxJobs' => (int) env($prefix.'MAX_JOBS', $maxJobs),
         'maxTime' => (int) env($prefix.'MAX_TIME', $maxTime),
@@ -39,7 +40,7 @@ $supervisor = static function (string $queue, int $min, int $max, int $timeout, 
 
 $supervisors = [
     'supervisor-orders' => $supervisor('orders', 1, 4, 60, 1000, 3600),
-    'supervisor-broadcasts' => $supervisor('broadcasts', 1, 2, 30, 2000, 3600),
+    'supervisor-broadcasts' => $supervisor('broadcasts', 1, 2, 30, 2000, 3600, 1),
     'supervisor-notifications' => $supervisor('notifications', 1, 2, 60, 500, 3600),
     'supervisor-default' => $supervisor('default', 1, 2, 100, 500, 3600),
 ];
