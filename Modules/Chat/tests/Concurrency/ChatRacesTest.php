@@ -139,10 +139,10 @@ it('admits at most the cap of distinct sockets per user under parallel channel a
     for ($i = 0; $i < 12; $i++) {
         $workers[] = ['POST', '/api/broadcasting/auth', $customer['token'], json_encode(['socket_id' => "9{$i}.{$i}", 'channel_name' => 'private-conversation.'.$conversation], JSON_THROW_ON_ERROR)];
     }
-    $results = Race::run(chatWorker(), $workers, environment: CHAT_RACE_ENV + [
+    $results = Race::run(chatWorker(), $workers, environment: array_merge(CHAT_RACE_ENV, [
         'BROADCAST_CONNECTION' => 'reverb', 'REVERB_APP_KEY' => 'race-key', 'REVERB_APP_SECRET' => 'race-secret', 'REVERB_APP_ID' => '100001',
         'RATE_LIMIT_MULTIPLIER' => '1', 'CHAT_CONNECTIONS_PER_USER' => '3', 'BROADCASTING_AUTH_RATE' => '1000',
-    ]);
+    ]));
 
     expect(statusCount($results, 200))->toBe(3)
         ->and(statusCount($results, 403))->toBe(9)

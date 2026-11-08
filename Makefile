@@ -76,7 +76,7 @@ test-db: ## Create the aghigh_test database (idempotent)
 > @$(DC) exec -T postgres psql -U postgres -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='aghigh_test'" | grep -q 1 || $(DC) exec -T postgres psql -U postgres -d postgres -c "CREATE DATABASE aghigh_test OWNER $(DB_MIGRATOR_USER)"
 
 test-int: test-db ## Concurrency suite on real Postgres + Redis (aghigh_test, direct to Postgres, isolated Redis dbs)
-> @$(DC) exec -e APP_ENV=testing -e DB_CONNECTION=pgsql -e DB_HOST=postgres -e DB_DATABASE=aghigh_test -e DB_USERNAME=$(DB_MIGRATOR_USER) -e DB_PASSWORD=$(DB_MIGRATOR_PASSWORD) -e REDIS_DB=10 -e REDIS_CACHE_DB=11 -e REDIS_STATE_DB=12 -e CACHE_LIMITER=state -e RATE_LIMIT_SLIDING_DRIVER=redis -e CHAT_STATE_DRIVER=redis -e BROADCAST_CONNECTION=null -e RATE_LIMIT_MULTIPLIER=1000 -e LOG_CHANNEL=null app php artisan test --testsuite=Concurrency
+> @$(DC) exec -e APP_ENV=testing -e DB_CONNECTION=pgsql -e DB_HOST=postgres -e DB_DATABASE=aghigh_test -e DB_USERNAME=$(DB_MIGRATOR_USER) -e DB_PASSWORD=$(DB_MIGRATOR_PASSWORD) -e REDIS_DB=10 -e REDIS_CACHE_DB=11 -e REDIS_STATE_DB=12 -e CACHE_LIMITER=state -e RATE_LIMIT_SLIDING_DRIVER=redis -e CHAT_STATE_DRIVER=redis -e BROADCAST_CONNECTION=null -e RATE_LIMIT_MULTIPLIER=1000 -e LOG_CHANNEL=null app php artisan test --testsuite=Concurrency $(ARGS)
 
 verify-proxy: ## Prove TrustProxies against the real Traefik stack (curl, no fake proxy)
 > ./scripts/verify-trusted-proxy.sh

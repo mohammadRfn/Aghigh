@@ -12,8 +12,9 @@ set -euo pipefail
 BASE="${BASE_URL:-http://localhost:8000}"
 DC="docker compose --env-file .env.docker"
 PASSWORD="${CHAT_SMOKE_PASSWORD:-Smoke-Password-123!}"
-APP_ID="$(grep -E '^REVERB_APP_ID=' .env.docker | tail -1 | cut -d= -f2- | tr -d '"')"
-APP_KEY="$(grep -E '^REVERB_APP_KEY=' .env.docker | tail -1 | cut -d= -f2- | tr -d '"')"
+APP_ID="$(grep -E '^REVERB_APP_ID=' .env.docker | tail -1 | cut -d= -f2- | tr -d '"' || true)"
+APP_KEY="$(grep -E '^REVERB_APP_KEY=' .env.docker | tail -1 | cut -d= -f2- | tr -d '"' || true)"
+[ -n "$APP_ID" ] || { echo "REVERB_APP_ID is missing in .env.docker (own line?): run make reverb-keys and recreate app/horizon/reverb"; exit 1; }
 [ -n "$APP_KEY" ] || { echo "REVERB_APP_KEY is empty: run make reverb-keys and recreate app/horizon/reverb"; exit 1; }
 
 echo "== 1) /apps/ must not reach Reverb through Traefik (expect the APP's 404 with X-Request-Id, not Reverb's 401)"

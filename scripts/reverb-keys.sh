@@ -4,6 +4,7 @@
 set -euo pipefail
 FILE="${1:-.env.docker}"
 [ -f "$FILE" ] || { echo "missing $FILE (run make init)"; exit 1; }
+[ -z "$(tail -c1 "$FILE")" ] || echo >> "$FILE"   # glue guard: end the last line before appending
 if grep -qE '^APP_ENV=("|)?production' "$FILE"; then
   echo "refusing: $FILE has APP_ENV=production (generate real secrets with your secret manager)"; exit 1
 fi

@@ -231,7 +231,7 @@ services:
 
   # ---- profile "loadtest": make k6 s=smoke ----
   k6:
-    image: ${REGISTRY_PREFIX:-}${K6_IMAGE:-grafana/k6:1.3.0}
+    image: ${REGISTRY_PREFIX:-}${K6_IMAGE:-grafana/k6:1.6.1}
     profiles: [loadtest]
     entrypoint: ["k6"]
     command: ["run", "/scripts/smoke.js"]
