@@ -128,7 +128,7 @@ That exceeds Reverb's default 10 000-byte `max_request_size` (HTTP API) and woul
 `max_message_size`. Defaults are therefore `REVERB_MAX_REQUEST_SIZE=32768` and `REVERB_APP_MAX_MESSAGE_SIZE=32768`
 (about 2x headroom). `ChatMessagingTest` builds the exact publish request and subscriber frame from a persisted max-length
 Persian message, asserts it is > 10 000 and within the configured limits, and prints the sizes:
-`[chat size] publish request N bytes, subscriber frame M bytes` (TODO(measure): paste the numbers from your run).
+`[chat size] publish request N bytes, subscriber frame M bytes` (measured with `make test` on the dev stack, 2026-11-08: publish request 14 479 bytes, subscriber frame 14 477 bytes, both under the 32 768 limits).
 If `CHAT_BODY_MAX_CHARS` is raised, raise both limits to at least `7 x chars + 1024`.
 
 ## Origin check
@@ -163,8 +163,8 @@ socket. Mitigation: short access-token TTL; clients re-authorize their channels 
   db 0, i.e. the `default` connection's server (noeviction). Pub/sub messages are not stored, so they cost no memory there.
 - Traefik's file provider points at `http://reverb:8080`; Docker's DNS returns every replica and each new WebSocket
   dial resolves again. The distribution is therefore whatever DNS ordering yields, **not** guaranteed round robin.
-  `make verify-chat` prints ESTABLISHED sockets per replica while k6 holds idle sockets (TODO(measure): paste the
-  observed split). Cross-replica fan-out is proven when every subscribed socket receives `message.sent` while the
+  `make verify-chat` prints ESTABLISHED sockets per replica while k6 holds idle sockets. Measured on 2026-11-08 with ONE replica: 19 ESTABLISHED sockets on `reverb-1` at the sampling moment; the split
+  across two replicas is NOT measured yet (`REVERB_SCALE=2 make up && make verify-chat` was not run). Cross-replica fan-out is proven when every subscribed socket receives `message.sent` while the
   split shows sockets on both replicas.
 - `max_connections` (`REVERB_APP_MAX_CONNECTIONS`) is enforced **per Reverb instance**, never globally.
 
@@ -173,8 +173,16 @@ socket. Mitigation: short access-token TTL; clients re-authorize their channels 
 ReactPHP's default `StreamSelectLoop` is limited by `FD_SETSIZE` = 1024 descriptors per process. The Dockerfile
 attempts `install-php-extensions uv` (ext-uv lifts the limit; ReactPHP picks `ExtUvLoop` automatically) but does not
 fail the build when php-uv does not compile on PHP 8.5. `make reverb-loop` prints the loop actually used.
+On the dev stack (2026-11-08) it printed `React\EventLoop\ExtUvLoop`, so the 1024 limit does not apply there.
 If it prints `StreamSelectLoop`, plan for < ~1000 sockets per replica and scale out with `REVERB_SCALE`
 (TODO(measure): ceiling observed by Task 10). The compose file raises `nofile` to 65 536 for the uv case.
+
+## Delivery latency (measured)
+
+`make verify-chat` (one Reverb replica, 5 subscribed sockets, the agent posts by REST, time until every socket has `message.sent`):
+with Horizon's default 3 s polling of an idle queue it took 727 ms and 1848 ms, and one run missed the 2 s limit; the job
+itself ran in 5 to 36 ms, so the wait was queue pickup. After `supervisor-broadcasts` got `sleep` = 1 s
+(`HORIZON_BROADCASTS_SLEEP`) six runs took 163 to 778 ms. Small samples, one machine: a sanity check, not a benchmark.
 
 ## Hand-off notes
 
@@ -182,7 +190,7 @@ If it prints `StreamSelectLoop`, plan for < ~1000 sockets per replica and scale 
   (after commit, ids only) - Chat needs no change. Connection count: Reverb exposes the Pusher-compatible
   `GET /apps/{app_id}/connections` (signed) on `reverb:8080` over the backend network; with scaling enabled Reverb
   gathers it from all replicas through pub/sub. `make verify-chat` step 4 calls it via the app's Pusher client
-  (TODO(measure): confirm the returned count on your stack; if it errors, the gap is "no connection metric").
+  (measured 2026-11-08: the call works and returned `{"connections":5}` while k6 held 19 ESTABLISHED sockets, 5 of them subscribed to the private channel; the two numbers were sampled a few seconds apart. The count therefore looks like channel-subscribed connections, not every open socket. That is observed, not verified in Reverb's source: do not use it as a socket count).
 - **Task 10 (load)**: `php artisan chat:verify-invariants --rebuild` after a run (non-zero exit on violation).
   Knobs: `CHAT_CONNECTIONS_PER_USER`, `CHAT_CONNECTION_TTL_MS`, `CHAT_*_RATE`, `RATE_LIMIT_MULTIPLIER`,
   `REVERB_APP_MAX_CONNECTIONS` (per replica), `REVERB_SCALE`, `CHAT_AGENT_MAX_OPEN`; per-replica ceiling above.
