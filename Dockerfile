@@ -29,6 +29,15 @@ RUN set -eu; \
       echo "install-php-extensions attempt $i failed, retrying in 10s"; sleep 10; \
     done
 
+# Task 8: Reverb's default ReactPHP loop (stream_select) is capped at FD_SETSIZE = 1024 descriptors per process.
+# ext-uv lifts that (React\EventLoop\Loop picks ExtUvLoop automatically when the extension is loaded). php-uv is a
+# beta PECL package and may not build on PHP 8.5, so the install is attempted but NOT fatal; the soft check below and
+# `make reverb-loop` print which loop the image really uses. Build with --build-arg WITH_UV=0 to skip it.
+ARG WITH_UV=1
+RUN if [ "$WITH_UV" = "1" ]; then \
+      install-php-extensions uv || echo "WARNING: ext-uv did not install on this PHP; Reverb falls back to stream_select (1024 fd per replica)"; \
+    fi
+RUN php -r 'echo "event-loop extensions loaded: ", json_encode(array_values(array_filter(["uv", "ev", "event"], "extension_loaded"))), PHP_EOL;'
 RUN php -r 'foreach (["pdo_pgsql","redis","pcntl","posix","intl","bcmath","zip","sodium"] as $e) { if (!extension_loaded($e)) { fwrite(STDERR, "missing extension: $e\n"); exit(1); } }'
 
 RUN php -r 'if (!in_array("argon2id", password_algos(), true)) { fwrite(STDERR, "Argon2id is required\n"); exit(1); }'

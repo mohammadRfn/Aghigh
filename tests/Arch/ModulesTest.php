@@ -41,3 +41,13 @@ if (in_array($kernel, $modules, true) && $featureModules !== []) {
 arch('all application code declares strict types')
     ->expect(['App', 'Modules'])
     ->toUseStrictTypes();
+
+// Task 8: Chat talks to Identity only through Contracts\CurrentUser (tests/Arch/ChatBoundaryTest.php has the full scan).
+arch('Chat does not use Identity models, enums, services or the guard')
+    ->expect('Modules\\Chat')
+    ->not->toUse(['Modules\\Identity\\Models', 'Modules\\Identity\\Enums', 'Modules\\Identity\\Services', 'Modules\\Identity\\Auth', 'Modules\\Identity\\Http']);
+
+arch('Chat does not use limiter engines or Shared Lua directly')
+    ->expect('Modules\\Chat')
+    ->not->toUse(['Modules\\Shared\\RateLimiting\\LuaScripts', 'Modules\\Shared\\RateLimiting\\RedisConcurrencyLimiter', 'Modules\\Shared\\RateLimiting\\RedisSlidingWindowLimiter']);
+

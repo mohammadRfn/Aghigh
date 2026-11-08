@@ -44,6 +44,9 @@ Shared (kernel), Identity, Catalog, Inventory, Ordering, Payment, Chat, Notifica
   tests run the in-memory limiter (phpunit.xml, multiplier 1000); limiter tests pin values with
   `Tests\Support\RateLimitTesting::exact()`. Anything Lua/Redis goes in the Concurrency suite.
 - Docs: `docs/rate-limiting.md`, ADR 0008. Lockout (identity.lockout.*) is a separate mechanism.
+- Chat (Task 8): `chat-messages` (closed) on POST messages, `chat-claim` (closed), `chat-typing`, `chat-heartbeat`,
+  `chat-read` (open), all after `auth:api`. The approximate per-user socket cap is
+  `rate-limits.concurrency.chat-connections` (read by Chat's ConnectionCap at channel auth, multiplier applies).
 
 ## Redis roles (important)
 - `cache` connection (redis-cache, allkeys-lru): disposable data only (e.g. catalog cache).
@@ -100,16 +103,24 @@ JSON on stdout, channels `app`, `security`, `audit`, `slow_query`. Sensitive key
 - Scheduled work goes in `routes/console.php` with `->onOneServer()->withoutOverlapping()`.
 - In tests the queue is `sync`; fake Mail/Queue/Event unless the test is about the queue itself.
 
-## WebSockets (Reverb) (current state; Task 8 completes it)
-- Container `reverb` (`reverb:start`, port 8080, internal network only). Traefik is the only published entrypoint
-  (host port 8000) and routes `/app/` and `/apps/` to Reverb, so browsers connect to localhost:8000, never 8080.
-- Reverb scales through Redis pub/sub on the `default` connection (see the `scaling` block in config/reverb.php).
-  `allowed_origins` is still `*`; Task 8 restricts it.
-- Publishing from the app container must target `reverb:8080` over http, while clients use the Traefik address.
-  The current REVERB_HOST/PORT/SCHEME values mix the two roles; Task 8 separates them.
-- Channel authorization must use the stateless JWT guard, not the `web`/session middleware. REST stays the source of
-  truth; broadcasts only notify about data that is already persisted.
-- IDs are UUIDs: the sample channel in routes/channels.php casts `$user->id` to int, which is wrong here. Do not copy it.
+## WebSockets (Reverb) (Task 8)
+- Container `reverb` (`reverb:start`, port 8080, scalable: `REVERB_SCALE=2 make up`, no container_name/host ports).
+  Traefik (host port 8000) routes only `/app/` to Reverb; `/apps/` (signed HTTP API) is NOT routed.
+- Two addresses, never mixed: the app/horizon PUBLISH to `REVERB_HOST=reverb`, `REVERB_PORT=8080`, `REVERB_SCHEME=http`
+  (config/broadcasting.php + reverb apps[].options); clients use `VITE_REVERB_HOST=localhost`, `VITE_REVERB_PORT=8000`,
+  `VITE_REVERB_SCHEME=http`, path `/app`. Keys: `make reverb-keys` (dev, fills empty values in .env.docker).
+- Channel auth = the single Task 7 route `POST /api/broadcasting/auth` (`api, auth:api, throttle.sliding:broadcasting-auth`).
+  Channels are declared by the owning module (`Modules/Chat/routes/channels.php`, `guards => ['api']`); root
+  routes/channels.php only points there. Never cast user ids to int.
+- `allowed_origins` = hosts (Reverb compares the Origin HOST only) from `REVERB_ALLOWED_ORIGINS`, default hosts of
+  `CORS_ALLOWED_ORIGINS`; `accept_client_events_from=none`. `max_connections` is per Reverb instance.
+  `REVERB_MAX_REQUEST_SIZE` / `REVERB_APP_MAX_MESSAGE_SIZE` = 32768 (Persian size arithmetic in docs/chat-protocol.md).
+- Scaling pub/sub reads `REDIS_HOST`/`REDIS_DB` (redis-queue db 0), not the `state` connection.
+- REST is the truth; broadcasts carry ids, load the committed row in `broadcastWith()`, implement
+  `ShouldDispatchAfterCommit`, run on `Queues::BROADCASTS` with explicit tries/backoff/timeout (< 30 s). Best effort:
+  clients gap-fill with `?after_seq=` and order by seq. Protocol, reconnect algorithm, limits: docs/chat-protocol.md.
+- Chat Redis state only through `Modules\Chat\State\ChatState` (`state` connection, `chat:` prefix; Feature tests use
+  `CHAT_STATE_DRIVER=memory`). Invariants: `php artisan chat:verify-invariants --rebuild`. ADR 0009.
 
 ## Workflow
 One branch per task (`feat/<task>`), conventional commits. Before finishing: `make lint stan test test-int` green.

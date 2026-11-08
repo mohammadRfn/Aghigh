@@ -36,7 +36,12 @@ mechanisms and both stay. A locked account still consumes limiter budget.
 | `auth-refresh` | `POST /auth/refresh` | ip | 30 | laravel | closed | refresh rotation is one SQL write; legit clients refresh rarely |
 | `orders-ip` | all `/orders*` (pre-auth) | ip | 120 | laravel | closed | shield auth:api from unauthenticated floods |
 | `orders` | all `/orders*` (post-auth) | user | 30 | **sliding** | closed | the only sliding-log limiter; per-user accuracy matters here |
-| `chat-messages` | Task 8 message POST | user | 60 | laravel | closed | one message per second per user |
+| `chat-messages` | `POST /conversations/{id}/messages` (after `auth:api`) | user | 60 | laravel | closed | one message per second per user; writes must not run unthrottled |
+| `chat-typing` | `POST /conversations/{id}/typing` | user | 60 | laravel | **open** | ephemeral; the broadcast itself is throttled to 1 per 3 s (SET NX EX) |
+| `chat-heartbeat` | `POST /presence/heartbeat`, `GET /presence` | user | 12 | laravel | **open** | one heartbeat per ~5 s per user is plenty for a 60 s presence TTL |
+| `chat-read` | `POST /conversations/{id}/read` | user | 120 | laravel | **open** | idempotent marker update |
+| `chat-claim` | `POST /support/queue/claim` | user | 60 | laravel | closed | protects queue integrity and the claim transaction |
+| `chat-connections` (concurrency section) | channel auth (`POST /api/broadcasting/auth`) | user | 5 distinct sockets per 120 s | Lua in Chat (`chat:conn:{user}`) | closed | approximate per-user WebSocket cap (docs/chat-protocol.md) |
 | `public-catalog` | `GET /products*`, `GET /categories` | ip | 300 | laravel | **open** | cached reads; availability beats precision |
 | `admin` | `/admin/*`, `PATCH /users/{id}/role`, inventory admin | user | 120 | laravel | closed | small audience, keep abuse of a stolen admin token bounded |
 | `webhook` | `POST /payments/webhook` | ip | 600 | laravel | **open** | the HMAC signature is the gate; the limiter only stops floods |

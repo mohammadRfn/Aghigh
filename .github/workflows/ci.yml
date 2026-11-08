@@ -77,6 +77,7 @@ jobs:
       CACHE_STORE: redis
       CACHE_LIMITER: state
       QUEUE_CONNECTION: redis
+      CHAT_STATE_DRIVER: redis
       LOG_CHANNEL: 'null'
     steps:
       - uses: actions/checkout@v4

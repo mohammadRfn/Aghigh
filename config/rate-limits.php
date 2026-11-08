@@ -66,7 +66,13 @@ return [
         'orders' => ['limit' => (int) env('ORDERS_USER_RATE', 30), 'window' => 60, 'by' => 'user', 'driver' => 'sliding', 'fail' => 'closed'],
 
         // ---- chat (Task 8 attaches it to POST /api/v1/chat/conversations/{id}/messages)
+        // Task 8 chat. messages + claim fail closed (writes / queue integrity); typing, heartbeat and read fail open
+        // (ephemeral or idempotent: an outage only loses indicators). All are attached after auth:api.
         'chat-messages' => ['limit' => (int) env('CHAT_MESSAGES_RATE', 60), 'window' => 60, 'by' => 'user', 'driver' => 'laravel', 'fail' => 'closed'],
+        'chat-typing' => ['limit' => (int) env('CHAT_TYPING_RATE', 60), 'window' => 60, 'by' => 'user', 'driver' => 'laravel', 'fail' => 'open'],
+        'chat-heartbeat' => ['limit' => (int) env('CHAT_HEARTBEAT_RATE', 12), 'window' => 60, 'by' => 'user', 'driver' => 'laravel', 'fail' => 'open'],
+        'chat-read' => ['limit' => (int) env('CHAT_READ_RATE', 120), 'window' => 60, 'by' => 'user', 'driver' => 'laravel', 'fail' => 'open'],
+        'chat-claim' => ['limit' => (int) env('CHAT_CLAIM_RATE', 60), 'window' => 60, 'by' => 'user', 'driver' => 'laravel', 'fail' => 'closed'],
 
         // ---- public catalog (per IP). Reads are cached and harmless: fail OPEN.
         // GET /api/v1/products, /api/v1/products/{identifier}, /api/v1/categories
@@ -86,6 +92,10 @@ return [
     // (Octane max_execution_time / PgBouncer lock_timeouts) so a crashed worker's slot expires on its own.
     'concurrency' => [
         'orders' => ['max' => (int) env('ORDERS_CONCURRENCY_MAX', 2), 'ttl_ms' => (int) env('ORDERS_CONCURRENCY_TTL_MS', 30000), 'fail' => 'closed'],
+        // Task 8: APPROXIMATE per-user WebSocket cap, enforced at channel auth over distinct socket_ids seen within
+        // ttl_ms (refreshed by POST /presence/heartbeat). Not a middleware: Modules\Chat\Services\ConnectionCap reads it,
+        // so RATE_LIMIT_MULTIPLIER applies and load tests raise it without disabling it. Fails closed.
+        'chat-connections' => ['max' => (int) env('CHAT_CONNECTIONS_PER_USER', 5), 'ttl_ms' => (int) env('CHAT_CONNECTION_TTL_MS', 120000), 'fail' => 'closed'],
     ],
 
     // Business limit inside PlaceOrder (NOT the HTTP limiter): attempts per user per minute, counted in Redis

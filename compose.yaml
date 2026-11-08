@@ -113,10 +113,21 @@ services:
       retries: 3
       start_period: 20s
 
+  # Task 8: scalable (`make up REVERB_SCALE=2`): no container_name, no host ports. Traefik reaches it on `edge`
+  # (only /app/ is routed), the app publishes to reverb:8080 on `backend`. Replicas fan out through Redis pub/sub
+  # (REVERB_SCALING_ENABLED, config/reverb.php). Docker DNS returns every replica for "reverb".
   reverb:
     <<: *app
     command: ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080"]
     networks: [edge, backend]
+    # Each WebSocket is a file descriptor. With ext-uv the loop can use them; with stream_select the loop itself
+    # stays capped at 1024 per process (docs/chat-protocol.md "Connection ceiling").
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    # Lets reverb:start close sockets cleanly on SIGTERM; clients reconnect with backoff (Task 11 tunes it).
+    stop_grace_period: 15s
     healthcheck:
       test: ["CMD", "php", "-r", "exit(@fsockopen('127.0.0.1', 8080) ? 0 : 1);"]
       interval: 15s
