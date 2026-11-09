@@ -1,0 +1,121 @@
+// Task 9: ship app, horizon, reverb, scheduler and traefik container logs to Loki.
+// Source = Docker socket (Promtail is EOL; on Docker Desktop/WSL2 /var/lib/docker/containers lives inside the VM so
+// a json-file mount gives nothing). Security cost: the socket is root-equivalent even mounted :ro (the API, not the
+// file, is what matters) -- docs/observability.md explains and lists the socket-proxy alternative.
+// Loki labels: service, channel, level ONLY. request_id is structured metadata (queryable, not indexed as a label).
+// UNTESTED at runtime: the JSON field paths (extra.request_id vs context.request_id) must be confirmed against a
+// real log line first (docs/observability.md "Confirm the log shape").
+
+logging {
+  level  = "warn"
+  format = "logfmt"
+}
+
+discovery.docker "compose" {
+  host             = "unix:///var/run/docker.sock"
+  refresh_interval = "10s"
+  filter {
+    name   = "label"
+    values = ["com.docker.compose.project=aghigh"]
+  }
+}
+
+discovery.relabel "compose" {
+  targets = discovery.docker.compose.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    regex         = "app|horizon|reverb|scheduler|traefik"
+    action        = "keep"
+  }
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service"
+  }
+}
+
+loki.source.docker "compose" {
+  host             = "unix:///var/run/docker.sock"
+  targets          = discovery.docker.compose.targets
+  relabel_rules    = discovery.relabel.compose.rules
+  refresh_interval = "10s"
+  forward_to       = [loki.process.pipeline.receiver]
+}
+
+loki.process "pipeline" {
+  forward_to = [loki.write.local.receiver]
+
+  // Laravel channels (Monolog JsonFormatter): {"message","context","level","level_name","channel","datetime","extra"}
+  stage.match {
+    selector = "{service=~\"app|horizon|reverb|scheduler\"}"
+
+    stage.json {
+      expressions = {
+        level          = "level_name",
+        channel        = "channel",
+        request_id     = "extra.request_id",
+        request_id_ctx = "context.request_id",
+      }
+    }
+    // Fallback when request_id turned out to live in context instead of extra (confirm with a real line).
+    stage.template {
+      source   = "request_id"
+      template = "{{ if .Value }}{{ .Value }}{{ else }}{{ .request_id_ctx }}{{ end }}"
+    }
+    stage.template {
+      source   = "level"
+      template = "{{ ToLower .Value }}"
+    }
+    // A non-JSON line (artisan output, PHP warning) has no channel/level: keep it findable without a new label value.
+    stage.template {
+      source   = "channel"
+      template = "{{ if .Value }}{{ .Value }}{{ else }}stdout{{ end }}"
+    }
+    stage.template {
+      source   = "level"
+      template = "{{ if .Value }}{{ .Value }}{{ else }}unknown{{ end }}"
+    }
+  }
+
+  // Traefik: JSON access log (DownstreamStatus, RequestPath, downstream_X-Request-Id) and its own JSON log (level, msg).
+  stage.match {
+    selector = "{service=\"traefik\"}"
+
+    stage.json {
+      expressions = {
+        request_id = "\"downstream_X-Request-Id\"",
+        status     = "DownstreamStatus",
+        level      = "level",
+      }
+    }
+    stage.template {
+      source   = "channel"
+      template = "{{ if .status }}access{{ else }}traefik{{ end }}"
+    }
+    stage.template {
+      source   = "level"
+      template = "{{ if .Value }}{{ ToLower .Value }}{{ else }}info{{ end }}"
+    }
+  }
+
+  stage.labels {
+    values = {
+      channel = "",
+      level   = "",
+    }
+  }
+
+  stage.structured_metadata {
+    values = {
+      request_id = "",
+    }
+  }
+
+}
+
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+  external_labels = {}
+}

@@ -1,0 +1,74 @@
+# Task 9: Loki single binary, filesystem storage, TSDB v13. Retention and ingestion limits are explicit and
+# provisional (env through -config.expand-env=true, defaults in compose.yaml). Telemetry off.
+auth_enabled: false
+
+server:
+  http_listen_address: 0.0.0.0
+  http_listen_port: 3100
+  grpc_listen_port: 9096
+  log_level: warn
+
+common:
+  instance_addr: 127.0.0.1
+  path_prefix: /loki
+  storage:
+    filesystem:
+      chunks_directory: /loki/chunks
+      rules_directory: /loki/rules
+  replication_factor: 1
+  ring:
+    kvstore:
+      store: inmemory
+
+schema_config:
+  configs:
+    - from: "2024-04-01"
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+
+limits_config:
+  # provisional: one week of dev logs
+  retention_period: ${LOKI_RETENTION_PERIOD:-168h}
+  ingestion_rate_mb: ${LOKI_INGESTION_RATE_MB:-4}
+  ingestion_burst_size_mb: ${LOKI_INGESTION_BURST_MB:-8}
+  max_streams_per_user: 1000           # labels are service x channel x level only (ADR: docs/observability.md)
+  max_line_size: 262144
+  max_line_size_truncate: true
+  reject_old_samples: true
+  reject_old_samples_max_age: 168h
+  allow_structured_metadata: true      # request_id travels as structured metadata, never as a label
+  volume_enabled: true
+  max_query_series: 500
+  max_entries_limit_per_query: 5000
+
+compactor:
+  working_directory: /loki/compactor
+  retention_enabled: true
+  delete_request_store: filesystem
+  compaction_interval: 10m
+  retention_delete_delay: 2h
+  retention_delete_worker_count: 50
+
+ingester:
+  chunk_idle_period: 5m
+  chunk_retain_period: 30s
+  wal:
+    enabled: true
+    dir: /loki/wal
+
+query_range:
+  results_cache:
+    cache:
+      embedded_cache:
+        enabled: true
+        max_size_mb: 64
+
+pattern_ingester:
+  enabled: false
+
+analytics:
+  reporting_enabled: false

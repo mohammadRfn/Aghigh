@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Modules\Shared\Providers;
 
+use Modules\Shared\Console\MetricsReset;
 use Modules\Shared\Console\QueueDrainTime;
 use Modules\Shared\Console\QueueMetricsCommand;
 use Modules\Shared\Outbox\OutboxEventMap;
@@ -26,7 +27,7 @@ class SharedServiceProvider extends ModuleServiceProvider
      *
      * @var string[]
      */
-    protected array $commands = [QueueMetricsCommand::class, QueueDrainTime::class];
+    protected array $commands = [QueueMetricsCommand::class, QueueDrainTime::class, MetricsReset::class];
 
     /**
      * Provider classes to register.
@@ -37,6 +38,7 @@ class SharedServiceProvider extends ModuleServiceProvider
         EventServiceProvider::class,
         RouteServiceProvider::class,
         RateLimitServiceProvider::class, // Task 7: named limiters, throttle.sliding + concurrency.cap
+        MetricsServiceProvider::class, // Task 9: Metrics contract, /internal/metrics, queue + limiter listeners
     ];
 
     public function register(): void

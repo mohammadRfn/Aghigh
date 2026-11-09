@@ -194,6 +194,24 @@ return [
             'backoff_cap' => env('REDIS_BACKOFF_CAP', 1000),
         ],
 
+        // Task 9 (ADR 0010): metrics storage, same instance as `state` (noeviction) but its OWN db, so SCAN/DEL
+        // resets (metrics:reset) and the promphp key scans can never touch limiter, idempotency or chat keys.
+        // Short timeouts: a slow Redis must not hold a worker (writes happen after the response anyway).
+        'metrics' => [
+            'url' => env('REDIS_URL'),
+            'host' => env('REDIS_METRICS_HOST', env('REDIS_HOST', '127.0.0.1')),
+            'username' => env('REDIS_USERNAME'),
+            'password' => env('REDIS_PASSWORD'),
+            'port' => env('REDIS_PORT', '6379'),
+            'database' => env('REDIS_METRICS_DB', '3'),
+            'timeout' => (float) env('REDIS_METRICS_TIMEOUT', 0.5),
+            'read_timeout' => (float) env('REDIS_METRICS_READ_TIMEOUT', 0.5),
+            'max_retries' => env('REDIS_METRICS_MAX_RETRIES', 1),
+            'backoff_algorithm' => env('REDIS_BACKOFF_ALGORITHM', 'decorrelated_jitter'),
+            'backoff_base' => env('REDIS_BACKOFF_BASE', 100),
+            'backoff_cap' => env('REDIS_BACKOFF_CAP', 1000),
+        ],
+
     ],
 
 ];

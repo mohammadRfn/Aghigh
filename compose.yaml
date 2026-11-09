@@ -37,6 +37,28 @@ x-app: &app
     redis-queue:
       condition: service_healthy
 
+# Task 9: shared by the three GlitchTip containers (profile observability).
+x-glitchtip: &glitchtip
+  image: ${REGISTRY_PREFIX:-}${GLITCHTIP_IMAGE:-glitchtip/glitchtip:v6.0.3}
+  profiles: [observability]
+  environment:
+    DATABASE_URL: postgres://${GLITCHTIP_DB_USER:-glitchtip}:${GLITCHTIP_DB_PASSWORD:?run make obs-keys}@postgres:5432/${GLITCHTIP_DB_NAME:-glitchtip}
+    SECRET_KEY: ${GLITCHTIP_SECRET_KEY:?run make obs-keys}
+    PORT: "8000"
+    GLITCHTIP_DOMAIN: http://localhost:${GLITCHTIP_PORT:-8090}
+    DEFAULT_FROM_EMAIL: glitchtip@localhost
+    EMAIL_URL: smtp://mailpit:1025
+    VALKEY_URL: ${GLITCHTIP_VALKEY_URL:-}
+    ENABLE_USER_REGISTRATION: "False"
+    ENABLE_ORGANIZATION_CREATION: "True"
+    GLITCHTIP_MAX_EVENT_LIFE_DAYS: ${GLITCHTIP_EVENT_LIFE_DAYS:-30}
+    CELERY_WORKER_AUTOSCALE: "1,2"
+    CELERY_WORKER_MAX_TASKS_PER_CHILD: "1000"
+  volumes:
+    - glitchtip-uploads:/code/uploads
+  logging: *logging
+  restart: unless-stopped
+
 services:
   traefik:
     image: ${REGISTRY_PREFIX:-}${TRAEFIK_IMAGE:-traefik:v3.6}
@@ -47,6 +69,17 @@ services:
       - --ping=true
       - --accesslog=true
       - --accesslog.format=json
+      # Task 9: keep the response X-Request-Id in the JSON access log (field downstream_X-Request-Id; UNTESTED name,
+      # obs-verify prints one real line) so one id spans edge, app and queue in Loki.
+      - --accesslog.fields.headers.names.X-Request-Id=keep
+      # Task 9: Traefik's own Prometheus metrics on a separate entrypoint that is NOT published (Prometheus reaches
+      # traefik:8082 over the edge network). Flags per Traefik v3 reference; UNTESTED at runtime.
+      - --entrypoints.metrics.address=:8082
+      - --metrics.prometheus=true
+      - --metrics.prometheus.entryPoint=metrics
+      - --metrics.prometheus.addEntryPointsLabels=true
+      - --metrics.prometheus.addRoutersLabels=true
+      - --metrics.prometheus.addServicesLabels=true
       - --log.level=INFO
       - --global.checknewversion=false
       - --global.sendanonymoususage=false
@@ -172,6 +205,10 @@ services:
       MAX_CLIENT_CONN: "500"
       DEFAULT_POOL_SIZE: "${PGBOUNCER_POOL_SIZE:-20}" # capacity table: docs/queues.md
       MAX_PREPARED_STATEMENTS: "200"
+      # Task 9: pgbouncer_exporter logs in to the `pgbouncer` console as the APP user. The edoburu entrypoint writes
+      # only DB_USER to userlist.txt (plaintext under scram-sha-256), so a separate stats role would need a custom
+      # auth file; stats_users only grants SHOW on the console (no data access). docs/observability.md.
+      STATS_USERS: ${DB_APP_USER}
     healthcheck:
       test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-p", "5432"]
       interval: 5s
@@ -246,8 +283,282 @@ services:
     logging: *logging
     restart: "no"
 
-  # ---- profile "observability": reserved. Compose cannot declare an empty profile;
-  # ---- Prometheus/Grafana/Loki services will be added here with `profiles: [observability]`.
+  # ---- profile "observability": make obs-up / obs-down / obs-verify (Task 9, docs/observability.md) ----
+  # Every image pinned to an exact tag, no internet after `make pull`, UIs on 127.0.0.1 only. Services that publish
+  # a port join `edge` (backend is internal: true and cannot publish); exporters stay on `backend`.
+  # All limits are provisional configuration (TODO(measure): docs/observability.md "Resource cost").
+  prometheus:
+    image: ${REGISTRY_PREFIX:-}${PROMETHEUS_IMAGE:-prom/prometheus:v3.16.0}
+    profiles: [observability]
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=${PROM_RETENTION_TIME:-7d}      # provisional
+      - --storage.tsdb.retention.size=${PROM_RETENTION_SIZE:-2GB}     # provisional
+      - --web.listen-address=0.0.0.0:9090
+      - --web.external-url=http://localhost:${PROMETHEUS_PORT:-9090}
+      - --web.enable-lifecycle
+    ports:
+      - "127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./docker/observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./docker/observability/prometheus/rules:/etc/prometheus/rules:ro
+      # Bearer token for app:8000/internal/metrics, written by `make obs-keys` (git-ignored, = METRICS_TOKEN).
+      - ./docker/observability/secrets/metrics_token:/etc/prometheus/secrets/metrics_token:ro
+      - prometheus-data:/prometheus
+    # busybox wget is in the image; UNTESTED on this host.
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9090/-/healthy"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+    networks: [edge, backend]
+    cpus: ${PROMETHEUS_CPUS:-1}
+    mem_limit: ${PROMETHEUS_MEM_LIMIT:-512m}
+    logging: *logging
+    restart: unless-stopped
+
+  grafana:
+    image: ${REGISTRY_PREFIX:-}${GRAFANA_IMAGE:-grafana/grafana:12.4.14}
+    profiles: [observability]
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?run make obs-keys}
+      GF_SECURITY_DISABLE_GRAVATAR: "true"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_AUTH_DISABLE_LOGIN_FORM: "false"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_USERS_ALLOW_ORG_CREATE: "false"
+      GF_SERVER_HTTP_ADDR: 0.0.0.0
+      GF_SERVER_ROOT_URL: http://localhost:${GRAFANA_PORT:-3000}
+      # No internet: telemetry, update checks, plugin update checks, news feed and plugin preinstall all off
+      # (env names = [section]_[key] of the Grafana 12 configuration reference; UNTESTED at runtime).
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: "false"
+      GF_ANALYTICS_FEEDBACK_LINKS_ENABLED: "false"
+      GF_NEWS_NEWS_FEED_ENABLED: "false"
+      GF_PLUGINS_PREINSTALL_DISABLED: "true"
+      GF_PLUGINS_PLUGIN_ADMIN_ENABLED: "false"
+      GF_PLUGINS_PUBLIC_KEY_RETRIEVAL_DISABLED: "true"
+      GF_DASHBOARDS_MIN_REFRESH_INTERVAL: 10s
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/api.json
+      GF_LOG_LEVEL: warn
+    ports:
+      - "127.0.0.1:${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - ./docker/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./docker/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    # The image ships curl; UNTESTED on this host.
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    depends_on:
+      prometheus:
+        condition: service_started
+    networks: [edge, backend]
+    cpus: ${GRAFANA_CPUS:-0.5}
+    mem_limit: ${GRAFANA_MEM_LIMIT:-384m}
+    logging: *logging
+    restart: unless-stopped
+
+  loki:
+    image: ${REGISTRY_PREFIX:-}${LOKI_IMAGE:-grafana/loki:3.6.20}
+    profiles: [observability]
+    command:
+      - -config.file=/etc/loki/loki.yml
+      - -config.expand-env=true
+    environment:
+      LOKI_RETENTION_PERIOD: ${LOKI_RETENTION_PERIOD:-168h}   # provisional
+      LOKI_INGESTION_RATE_MB: ${LOKI_INGESTION_RATE_MB:-4}    # provisional
+      LOKI_INGESTION_BURST_MB: ${LOKI_INGESTION_BURST_MB:-8}  # provisional
+    ports:
+      - "127.0.0.1:${LOKI_PORT:-3100}:3100" # API only (query_range for the worked example); no UI
+    volumes:
+      - ./docker/observability/loki/loki.yml:/etc/loki/loki.yml:ro
+      - loki-data:/loki
+    # No healthcheck: the image base was not verified to carry a shell/wget (docs/observability.md).
+    networks: [edge, backend]
+    cpus: ${LOKI_CPUS:-1}
+    mem_limit: ${LOKI_MEM_LIMIT:-512m}
+    logging: *logging
+    restart: unless-stopped
+
+  # Promtail is end-of-life: Alloy reads container logs through the Docker socket (the json-file path is inside the
+  # Docker Desktop/WSL2 VM). The socket is root-equivalent even when mounted :ro -- see docs/observability.md.
+  alloy:
+    image: ${REGISTRY_PREFIX:-}${ALLOY_IMAGE:-grafana/alloy:v1.21.3}
+    profiles: [observability]
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - --disable-reporting
+      - /etc/alloy/config.alloy
+    volumes:
+      - ./docker/observability/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - alloy-data:/var/lib/alloy/data
+    depends_on:
+      loki:
+        condition: service_started
+    networks: [backend]
+    cpus: ${ALLOY_CPUS:-0.5}
+    mem_limit: ${ALLOY_MEM_LIMIT:-256m}
+    logging: *logging
+    restart: unless-stopped
+
+  cadvisor:
+    image: ${REGISTRY_PREFIX:-}${CADVISOR_IMAGE:-gcr.io/cadvisor/cadvisor:v0.52.1}
+    profiles: [observability]
+    command:
+      - --docker_only=true
+      - --housekeeping_interval=10s
+      - --store_container_labels=true
+      # default disabled set minus `tcp`: container_network_tcp_usage_total{tcp_state} per container (provisional,
+      # expensive; Task 9 checks whether it gives per-replica ESTABLISHED sockets for reverb on this host).
+      - --disable_metrics=udp,advtcp,sched,percpu,hugetlb,referenced_memory,cpu_topology,resctrl,cpuset,process
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    # Docker Desktop/WSL2: per-container and filesystem series may be partial (docs/observability.md).
+    networks: [backend]
+    cpus: ${CADVISOR_CPUS:-0.5}
+    mem_limit: ${CADVISOR_MEM_LIMIT:-256m}
+    logging: *logging
+    restart: unless-stopped
+
+  node-exporter:
+    image: ${REGISTRY_PREFIX:-}${NODE_EXPORTER_IMAGE:-prom/node-exporter:v1.12.1}
+    profiles: [observability]
+    command:
+      - --path.rootfs=/rootfs
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
+      - --web.listen-address=:9100
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    # On Docker Desktop these are the VM's CPU/memory/disks, not Windows' (docs/observability.md).
+    networks: [backend]
+    cpus: ${NODE_EXPORTER_CPUS:-0.25}
+    mem_limit: ${NODE_EXPORTER_MEM_LIMIT:-64m}
+    logging: *logging
+    restart: unless-stopped
+
+  # Dedicated read-only role (pg_monitor, CONNECT), DIRECT to Postgres (not through PgBouncer), 1-2 connections
+  # counted in docs/queues.md. Role created by docker/postgres/init/02-observability-roles.sh / make monitoring-role.
+  postgres-exporter:
+    image: ${REGISTRY_PREFIX:-}${POSTGRES_EXPORTER_IMAGE:-prometheuscommunity/postgres-exporter:v0.20.1}
+    profiles: [observability]
+    environment:
+      DATA_SOURCE_URI: postgres:5432/${POSTGRES_DB}?sslmode=disable
+      DATA_SOURCE_USER: ${DB_MONITOR_USER:-aghigh_monitor}
+      DATA_SOURCE_PASS: ${DB_MONITOR_PASSWORD:?run make obs-keys}
+      PG_EXPORTER_WEB_LISTEN_ADDRESS: ":9187"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [backend]
+    cpus: ${POSTGRES_EXPORTER_CPUS:-0.25}
+    mem_limit: ${POSTGRES_EXPORTER_MEM_LIMIT:-64m}
+    logging: *logging
+    restart: unless-stopped
+
+  pgbouncer-exporter:
+    image: ${REGISTRY_PREFIX:-}${PGBOUNCER_EXPORTER_IMAGE:-prometheuscommunity/pgbouncer-exporter:v0.12.1}
+    profiles: [observability]
+    command:
+      - --pgBouncer.connectionString=postgres://${DB_APP_USER}:${DB_APP_PASSWORD}@pgbouncer:5432/pgbouncer?sslmode=disable
+      - --web.listen-address=:9127
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+    networks: [backend]
+    cpus: ${PGBOUNCER_EXPORTER_CPUS:-0.25}
+    mem_limit: ${PGBOUNCER_EXPORTER_MEM_LIMIT:-64m}
+    logging: *logging
+    restart: unless-stopped
+
+  # One exporter per Redis INSTANCE: memory is per instance, keyspace is reported per db (db0 queues/Reverb, db2
+  # state, db3 metrics inside redis-queue).
+  redis-exporter-queue:
+    image: ${REGISTRY_PREFIX:-}${REDIS_EXPORTER_IMAGE:-oliver006/redis_exporter:v1.97.0-alpine}
+    profiles: [observability]
+    environment:
+      REDIS_ADDR: redis://redis-queue:6379
+      REDIS_EXPORTER_WEB_LISTEN_ADDRESS: ":9121"
+    depends_on:
+      redis-queue:
+        condition: service_healthy
+    networks: [backend]
+    cpus: ${REDIS_EXPORTER_CPUS:-0.25}
+    mem_limit: ${REDIS_EXPORTER_MEM_LIMIT:-64m}
+    logging: *logging
+    restart: unless-stopped
+
+  redis-exporter-cache:
+    image: ${REGISTRY_PREFIX:-}${REDIS_EXPORTER_IMAGE:-oliver006/redis_exporter:v1.97.0-alpine}
+    profiles: [observability]
+    environment:
+      REDIS_ADDR: redis://redis-cache:6379
+      REDIS_EXPORTER_WEB_LISTEN_ADDRESS: ":9121"
+    depends_on:
+      redis-cache:
+        condition: service_healthy
+    networks: [backend]
+    cpus: ${REDIS_EXPORTER_CPUS:-0.25}
+    mem_limit: ${REDIS_EXPORTER_MEM_LIMIT:-64m}
+    logging: *logging
+    restart: unless-stopped
+
+  # GlitchTip (Sentry-compatible): own database + role on the shared Postgres (02-observability-roles.sh), direct
+  # connection (not PgBouncer). Postgres-only mode (VALKEY_URL empty) is supported since GlitchTip 5.2 (release
+  # notes 2025-11-13, "experimental"); set GLITCHTIP_VALKEY_URL to use a Redis instead. UI: http://localhost:8090.
+  glitchtip:
+    <<: *glitchtip
+    ports:
+      - "127.0.0.1:${GLITCHTIP_PORT:-8090}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      glitchtip-migrate:
+        condition: service_completed_successfully
+    networks: [edge, backend]
+    cpus: ${GLITCHTIP_CPUS:-1}
+    mem_limit: ${GLITCHTIP_MEM_LIMIT:-512m}
+
+  glitchtip-worker:
+    <<: *glitchtip
+    command: ["bin/run-celery-with-beat.sh"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      glitchtip-migrate:
+        condition: service_completed_successfully
+    networks: [backend]
+    cpus: ${GLITCHTIP_WORKER_CPUS:-1}
+    mem_limit: ${GLITCHTIP_WORKER_MEM_LIMIT:-512m}
+
+  glitchtip-migrate:
+    <<: *glitchtip
+    command: ["./manage.py", "migrate", "--noinput"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [backend]
+    cpus: ${GLITCHTIP_CPUS:-1}
+    mem_limit: ${GLITCHTIP_MEM_LIMIT:-512m}
+    restart: "no" # one-shot: unless-stopped would loop it
 
 networks:
   edge:
@@ -260,3 +571,9 @@ networks:
 volumes:
   pgdata:
   redis-queue-data:
+  # profile observability
+  prometheus-data:
+  grafana-data:
+  loki-data:
+  alloy-data:
+  glitchtip-uploads:

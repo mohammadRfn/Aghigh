@@ -52,8 +52,18 @@ only while a statement or transaction runs. Worst case = every process inside a 
 | Horizon master + 4 supervisors | 5 | no queries | 0 |
 | Reverb | 1 | counted although it does not query today | 1 |
 | Scheduler | `schedule:run` + 1 scheduled command | jobs are only pushed | 2 |
-| **Total** | | | **15** |
+| **Total (through PgBouncer)** | | | **15** |
 | PgBouncer `DEFAULT_POOL_SIZE` | | compose `${PGBOUNCER_POOL_SIZE:-20}` | **20 (5 spare)** |
+
+Task 9 adds clients that do NOT use the pool but count against Postgres `max_connections` (default 100) and,
+for pgbouncer_exporter, against PgBouncer `MAX_CLIENT_CONN` (500), never against the server pool:
+
+| Process (profile `observability`) | Connections | Where | Notes |
+|---|---|---|---|
+| postgres_exporter (`aghigh_monitor`, pg_monitor) | 1 to 2, direct to Postgres | `max_connections` | role has `CONNECTION LIMIT 3` |
+| pgbouncer_exporter (app user, `stats_users`) | 1 client to the `pgbouncer` console | `MAX_CLIENT_CONN` | 0 server connections |
+| GlitchTip web + worker + beat (`glitchtip` role) | provisional 5 to 10, direct to Postgres, own database | `max_connections` | `TODO(measure)`: `make psql` -> `select usename, count(*) from pg_stat_activity group by 1;` |
+| Postgres budget | pool 20 + migrator 1 + tests ~10 + exporters 2 + GlitchTip 10 = ~43 | `max_connections` 100 | alert `AghighPostgresConnectionsSaturated` at 80% |
 
 Rule: total < pool. Raising `OCTANE_WORKERS` or any `HORIZON_*_MAX_PROCESSES` means raising
 `PGBOUNCER_POOL_SIZE` too (and Postgres `max_connections`, default 100, must stay above pool + migrator + tests).

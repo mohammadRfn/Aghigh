@@ -23,3 +23,23 @@ Scope: the Task 3 source implementation in this package. **Tests are supplied bu
 ## Before release
 
 Run `make lint stan test test-int`, inspect generated `/docs/api`, prove clean `make fresh-seed` plus register/verify/login/refresh/logout/reset in Mailpit, and obtain a green CI run. Review key permissions and retention, APP_DEBUG=false, actual HTTPS, CORS allowlists and the non-evicting state Redis. Do not erase state Redis as if it were a disposable cache.
+
+## Observability surface (Task 9)
+- `/internal/*` is never served from the edge: `docker/traefik/dynamic.yml` router `internal-deny` (priority 100,
+  `ipAllowList` with an unroutable range -> 403) sits above `app`; `make obs-verify` proves it with and without a
+  valid token. Prometheus scrapes `app:8000/internal/metrics` on the internal `backend` network with a bearer
+  token (`METRICS_TOKEN`, constant-time compare; empty token = 404, never open). `/internal/metrics` has no limiter
+  and no session: it is not reachable by clients, only by the scraper. `/horizon` is Task 11.
+- Metric labels can never carry PII: route NAME or URI template, method, status class, queue, job class, limiter
+  NAME, outcome, role. Never ids, emails, IPs, raw URLs or request ids (tests/Arch + MetricsEndpointTest cardinality).
+- Error reports (Sentry SDK -> GlitchTip): `send_default_pii=false`; `SentryScrubber::beforeSend` removes the request
+  body, query string and cookies, redacts headers/extra/contexts/tags/breadcrumbs/exception messages with the SAME
+  key list as the log redactor (`Modules\Shared\Logging\SensitiveKeys`), keeps only the user id, drops every client
+  error (4xx / `ProblemException` below 500) so only 5xx and job failures leave the app. Tested in SentryScrubTest.
+- Loki labels are `service`, `channel`, `level` only; `request_id` is structured metadata. Log lines are the app's
+  redacted JSON; Traefik's access log keeps the response `X-Request-Id` and the path (never bodies or cookies).
+- Grafana Alloy mounts the Docker socket read-only. That is still root-equivalent on the host (the API lets a client
+  start privileged containers; `:ro` only protects the inode). Dev-only; the documented alternative is a socket
+  proxy that exposes only `GET /containers/*` (docs/observability.md).
+- The observability UIs (Grafana, Prometheus, GlitchTip, Loki API) bind to 127.0.0.1 only; Grafana has no anonymous
+  access and a generated admin password (`make obs-keys`); exporters are reachable only on `backend`.

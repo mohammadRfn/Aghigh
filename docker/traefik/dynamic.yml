@@ -1,5 +1,14 @@
 http:
   routers:
+    # Task 9: /internal/* (metrics) is NEVER routed from the edge. Traefik has no "deny" middleware, so the router
+    # wins on priority and an ipAllowList that nothing can match (RFC 5737 TEST-NET-1) answers 403 for everyone.
+    # Prometheus scrapes app:8000/internal/metrics on the backend network instead. Proved by make obs-verify.
+    internal-deny:
+      rule: "PathPrefix(`/internal`)"
+      entryPoints: [web]
+      service: app
+      priority: 100
+      middlewares: [deny-all]
     app:
       rule: "PathPrefix(`/`)"
       entryPoints: [web]
@@ -15,6 +24,10 @@ http:
       entryPoints: [web]
       service: mailpit
       priority: 20
+  middlewares:
+    deny-all:
+      ipAllowList:
+        sourceRange: ["192.0.2.1/32"] # unroutable documentation address: no client ever matches -> 403
   services:
     app:
       loadBalancer:
