@@ -163,8 +163,7 @@ socket. Mitigation: short access-token TTL; clients re-authorize their channels 
   db 0, i.e. the `default` connection's server (noeviction). Pub/sub messages are not stored, so they cost no memory there.
 - Traefik's file provider points at `http://reverb:8080`; Docker's DNS returns every replica and each new WebSocket
   dial resolves again. The distribution is therefore whatever DNS ordering yields, **not** guaranteed round robin.
-  `make verify-chat` prints ESTABLISHED sockets per replica while k6 holds idle sockets. Measured on 2026-11-08 with ONE replica: 19 ESTABLISHED sockets on `reverb-1` at the sampling moment; the split
-  across two replicas is NOT measured yet (`REVERB_SCALE=2 make up && make verify-chat` was not run). Cross-replica fan-out is proven when every subscribed socket receives `message.sent` while the
+  `make verify-chat` prints ESTABLISHED sockets per replica while k6 holds idle sockets. Measured on 2026-11-09 with TWO replicas (`REVERB_SCALE=2 make up && make verify-chat`, one machine): 5 ESTABLISHED sockets on `reverb-1` and 14 on `reverb-2`, so the split was uneven (as warned above), and every one of the 5 subscribed sockets received `message.sent` (499 ms in that run). The output does not show how those 5 subscribed sockets were split between the replicas, only the split of all 19 sockets. Cross-replica fan-out is proven when every subscribed socket receives `message.sent` while the
   split shows sockets on both replicas.
 - `max_connections` (`REVERB_APP_MAX_CONNECTIONS`) is enforced **per Reverb instance**, never globally.
 
@@ -175,7 +174,7 @@ attempts `install-php-extensions uv` (ext-uv lifts the limit; ReactPHP picks `Ex
 fail the build when php-uv does not compile on PHP 8.5. `make reverb-loop` prints the loop actually used.
 On the dev stack (2026-11-08) it printed `React\EventLoop\ExtUvLoop`, so the 1024 limit does not apply there.
 If it prints `StreamSelectLoop`, plan for < ~1000 sockets per replica and scale out with `REVERB_SCALE`
-(TODO(measure): ceiling observed by Task 10). The compose file raises `nofile` to 65 536 for the uv case.
+(the real per-replica ceiling is not measured; it belongs to the Task 10 load test). The compose file raises `nofile` to 65 536 for the uv case.
 
 ## Delivery latency (measured)
 
@@ -183,6 +182,7 @@ If it prints `StreamSelectLoop`, plan for < ~1000 sockets per replica and scale 
 with Horizon's default 3 s polling of an idle queue it took 727 ms and 1848 ms, and one run missed the 2 s limit; the job
 itself ran in 5 to 36 ms, so the wait was queue pickup. After `supervisor-broadcasts` got `sleep` = 1 s
 (`HORIZON_BROADCASTS_SLEEP`) six runs took 163 to 778 ms. Small samples, one machine: a sanity check, not a benchmark.
+With two replicas, one run delivered to 5 sockets in 499 ms (2026-11-09).
 
 ## Hand-off notes
 
