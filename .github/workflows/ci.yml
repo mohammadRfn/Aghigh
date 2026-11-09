@@ -43,7 +43,21 @@ jobs:
       - run: php artisan key:generate
       - run: ./vendor/bin/pint --test
       - run: ./vendor/bin/phpstan analyse --memory-limit=1G --no-progress
-      - run: php artisan test --testsuite=Unit,Feature,Arch
+      - name: Unit, Feature, Arch (in-memory, same env as make test)
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ":memory:"
+          CACHE_STORE: array
+          CACHE_LIMITER: array
+          QUEUE_CONNECTION: sync
+          SESSION_DRIVER: array
+          RATE_LIMIT_SLIDING_DRIVER: memory
+          CHAT_STATE_DRIVER: memory
+          BROADCAST_CONNECTION: "null"
+          RATE_LIMIT_MULTIPLIER: "1000"
+          LOG_CHANNEL: "null"
+        run: php artisan test --testsuite=Unit,Feature,Arch
 
   integration:
     runs-on: ubuntu-latest
