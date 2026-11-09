@@ -15,8 +15,9 @@ init: ## Create .env.docker from the example (once)
 build: init ## Build the app image
 > $(DC) build app
 
-up: init ## Start everything in the background
-> $(DC) up -d
+REVERB_SCALE ?= 1
+up: init ## Start everything in the background (REVERB_SCALE=2 make up: two Reverb replicas)
+> $(DC) up -d --scale reverb=$(REVERB_SCALE)
 
 down: ## Stop everything (data volumes are kept)
 > $(DC) down
@@ -37,7 +38,7 @@ migrate: ## Run migrations as the DDL role, directly against Postgres
 > @$(DC) exec -e DB_HOST=postgres -e DB_USERNAME=$(DB_MIGRATOR_USER) -e DB_PASSWORD=$(DB_MIGRATOR_PASSWORD) app php artisan migrate --force
 
 test: ## Run the test suite (sqlite in memory; never touches Postgres)
-> $(DC) exec -e APP_ENV=testing -e DB_CONNECTION=sqlite -e DB_DATABASE=:memory: -e CACHE_STORE=array -e CACHE_LIMITER=array -e QUEUE_CONNECTION=sync -e SESSION_DRIVER=array -e RATE_LIMIT_SLIDING_DRIVER=memory -e RATE_LIMIT_MULTIPLIER=1000 -e LOG_CHANNEL=null app php artisan test --testsuite=Unit,Feature,Arch
+> $(DC) exec -e APP_ENV=testing -e DB_CONNECTION=sqlite -e DB_DATABASE=:memory: -e CACHE_STORE=array -e CACHE_LIMITER=array -e QUEUE_CONNECTION=sync -e SESSION_DRIVER=array -e RATE_LIMIT_SLIDING_DRIVER=memory -e CHAT_STATE_DRIVER=memory -e BROADCAST_CONNECTION=null -e RATE_LIMIT_MULTIPLIER=1000 -e LOG_CHANNEL=null app php artisan test --testsuite=Unit,Feature,Arch
 
 lint: ## Check code style (Pint)
 > $(DC) exec app ./vendor/bin/pint --test
@@ -75,7 +76,15 @@ test-db: ## Create the aghigh_test database (idempotent)
 > @$(DC) exec -T postgres psql -U postgres -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='aghigh_test'" | grep -q 1 || $(DC) exec -T postgres psql -U postgres -d postgres -c "CREATE DATABASE aghigh_test OWNER $(DB_MIGRATOR_USER)"
 
 test-int: test-db ## Concurrency suite on real Postgres + Redis (aghigh_test, direct to Postgres, isolated Redis dbs)
-> @$(DC) exec -e APP_ENV=testing -e DB_CONNECTION=pgsql -e DB_HOST=postgres -e DB_DATABASE=aghigh_test -e DB_USERNAME=$(DB_MIGRATOR_USER) -e DB_PASSWORD=$(DB_MIGRATOR_PASSWORD) -e REDIS_DB=10 -e REDIS_CACHE_DB=11 -e REDIS_STATE_DB=12 -e CACHE_LIMITER=state -e RATE_LIMIT_SLIDING_DRIVER=redis -e RATE_LIMIT_MULTIPLIER=1000 -e LOG_CHANNEL=null app php artisan test --testsuite=Concurrency
+> @$(DC) exec -e APP_ENV=testing -e DB_CONNECTION=pgsql -e DB_HOST=postgres -e DB_DATABASE=aghigh_test -e DB_USERNAME=$(DB_MIGRATOR_USER) -e DB_PASSWORD=$(DB_MIGRATOR_PASSWORD) -e REDIS_DB=10 -e REDIS_CACHE_DB=11 -e REDIS_STATE_DB=12 -e CACHE_LIMITER=state -e RATE_LIMIT_SLIDING_DRIVER=redis -e CHAT_STATE_DRIVER=redis -e BROADCAST_CONNECTION=null -e RATE_LIMIT_MULTIPLIER=1000 -e LOG_CHANNEL=null app php artisan test --testsuite=Concurrency $(ARGS)
 
 verify-proxy: ## Prove TrustProxies against the real Traefik stack (curl, no fake proxy)
 > ./scripts/verify-trusted-proxy.sh
+
+.PHONY: reverb-keys reverb-loop verify-chat
+reverb-keys: init ## Dev only: write random REVERB_APP_ID/KEY/SECRET into .env.docker where they are empty
+> @./scripts/reverb-keys.sh .env.docker
+reverb-loop: ## Print the ReactPHP event loop class Reverb uses (ExtUvLoop = no 1024 fd ceiling)
+> @$(DC) exec -T reverb php -r 'require "vendor/autoload.php"; echo get_class(React\EventLoop\Loop::get()), PHP_EOL;'
+verify-chat: ## Real-stack chat smoke through Traefik with k6 (REVERB_SCALE=2 make up verify-chat: cross-replica)
+> ./scripts/verify-chat.sh

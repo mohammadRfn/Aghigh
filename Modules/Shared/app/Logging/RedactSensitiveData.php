@@ -21,6 +21,7 @@ final class RedactSensitiveData implements ProcessorInterface
     private const FRAGMENTS = [
         'password', 'passwd', 'secret', 'token', 'authorization', 'cookie',
         'api_key', 'apikey', 'jwt', 'card_number', 'cvv', 'signature', 'private_key', 'otp',
+        'body', // Task 8: chat message bodies (and any request/response body) are never logged
     ];
 
     public function __invoke(LogRecord $record): LogRecord

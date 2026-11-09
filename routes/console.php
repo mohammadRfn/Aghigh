@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
+use Modules\Chat\Jobs\SweepSupportQueue;
 use Modules\Ordering\Jobs\ExpireReservations;
 use Modules\Shared\Jobs\RelayOutbox;
 use Modules\Shared\Queue\Queues;
@@ -22,3 +23,8 @@ Schedule::job(new ExpireReservations, Queues::DEFAULT)->everyMinute()
     ->name('ordering:expire-reservations')->onOneServer()->withoutOverlapping();
 Schedule::job(new RelayOutbox, Queues::DEFAULT)->everyTenSeconds()
     ->name('shared:outbox-relay')->onOneServer()->withoutOverlapping();
+
+// Task 8: repair chat:support-queue from the database (missed enqueue, crash between ZPOPMIN and the claim UPDATE,
+// flushed Redis). The job also holds a mutex on the `state` store (WithoutOverlappingOnState).
+Schedule::job(new SweepSupportQueue, Queues::DEFAULT)->everyMinute()
+    ->name('chat:sweep-support-queue')->onOneServer()->withoutOverlapping();

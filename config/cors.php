@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'paths' => ['api/*', 'broadcasting/auth'],
+    'paths' => ['api/*'], // covers api/broadcasting/auth (Task 7 route); a bare broadcasting/auth path does not exist
     'allowed_methods' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     // Explicit list only: credentials (refresh cookie) are not allowed with "*".
     'allowed_origins' => array_values(array_filter(array_map(

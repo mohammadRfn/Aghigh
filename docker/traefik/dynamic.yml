@@ -6,7 +6,7 @@ http:
       service: app
       priority: 1
     reverb:
-      rule: "PathPrefix(`/app/`) || PathPrefix(`/apps/`)"
+      rule: "PathPrefix(`/app/`)" # Task 8: /apps/ (signed HTTP API) is NOT routed; only the app container uses it, on the backend network
       entryPoints: [web]
       service: reverb
       priority: 10
