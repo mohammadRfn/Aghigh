@@ -16,3 +16,4 @@ pg_locks_count | no lock is held at scrape time
 pgbouncer_pools_client_waiting_connections | nobody waits for a server connection under smoke load
 redis_evicted_keys_total | the cache Redis has not evicted anything yet
 rate\(aghigh_http_requests_total\{status_class="5xx"\} | no 5xx during the smoke run
+aghigh_http_requests_total\{route=~".\*webhook | the traffic burst sends no signed payment webhook

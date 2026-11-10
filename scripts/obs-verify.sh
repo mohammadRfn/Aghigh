@@ -69,6 +69,7 @@ if [ "${OBS_SKIP_TRAFFIC:-0}" != "1" ]; then
   echo "== 3) traffic burst (make k6 s=smoke, make verify-chat), then wait one scrape interval"
   make k6 s=smoke || bad "make k6 s=smoke failed"
   make verify-chat || bad "make verify-chat failed"
+  ./scripts/obs-orders.sh || bad "order traffic failed"
   sleep 20
 else
   echo "== 3) traffic burst skipped (OBS_SKIP_TRAFFIC=1)"
