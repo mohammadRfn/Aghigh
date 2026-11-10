@@ -574,7 +574,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(rate(pgbouncer_stats_sql_transactions_pooled_total[$__rate_interval]))",
+          "expr": "sum(rate(pgbouncer_stats_totals_sql_transactions_pooled_total[$__rate_interval]))",
           "legendFormat": "transactions/s",
           "range": true
         },
@@ -584,7 +584,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(rate(pgbouncer_stats_queries_pooled_total[$__rate_interval]))",
+          "expr": "sum(rate(pgbouncer_stats_totals_queries_pooled_total[$__rate_interval]))",
           "legendFormat": "queries/s",
           "range": true
         }
@@ -637,7 +637,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(rate(pgbouncer_stats_client_wait_seconds_total[$__rate_interval])) / sum(rate(pgbouncer_stats_sql_transactions_pooled_total[$__rate_interval]))",
+          "expr": "sum(rate(pgbouncer_stats_totals_client_wait_seconds_total[$__rate_interval])) / sum(rate(pgbouncer_stats_totals_sql_transactions_pooled_total[$__rate_interval]))",
           "legendFormat": "avg wait per transaction",
           "range": true
         }

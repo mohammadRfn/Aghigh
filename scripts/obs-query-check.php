@@ -73,7 +73,13 @@ $empty = [];
 $errors = [];
 $ok = 0;
 foreach ($queries as $expr => $origin) {
-    $url = $prometheus.'/api/v1/query?query='.rawurlencode($substitute($expr));
+    $run = $substitute($expr);
+    // Alert rules end in a threshold (`> 0.8`, `== 0`): empty then means "not firing", the healthy state.
+    // Check the series behind the threshold instead, so a missing metric still fails.
+    if (str_ends_with($origin, '.rules.yml')) {
+        $run = preg_replace('/\s*(==|!=|>=|<=|>|<)\s*-?[0-9.]+\s*$/', '', $run) ?? $run;
+    }
+    $url = $prometheus.'/api/v1/query?query='.rawurlencode($run);
     $context = stream_context_create(['http' => ['timeout' => 15, 'ignore_errors' => true]]);
     $raw = @file_get_contents($url, false, $context);
     $body = is_string($raw) ? json_decode($raw, true) : null;
