@@ -85,7 +85,7 @@ final class SentryScrubber
         $event->setTags($tags);
 
         foreach ($event->getContexts() as $name => $context) {
-            if (is_array($context)) {
+            if (is_array($context)) { // @phpstan-ignore function.alreadyNarrowedType (runtime guard: SDK contexts are untyped)
                 $event->setContext((string) $name, SensitiveKeys::redactArray($context));
             }
         }

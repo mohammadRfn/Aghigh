@@ -44,7 +44,7 @@ final class QueueGauges
         foreach ($snapshot['queues'] ?? [] as $queue => $values) {
             foreach ($gauges as $field => [$name, $help]) {
                 $value = $values[$field] ?? null;
-                if ($value === null || ! is_numeric($value)) {
+                if ($value === null || ! is_numeric($value)) { // @phpstan-ignore function.alreadyNarrowedType (runtime guard: snapshot comes from Redis/JSON)
                     continue;
                 }
                 $registry->getOrRegisterGauge('', $name, $help, ['queue'])->set((float) $value, [(string) $queue]);

@@ -41,6 +41,10 @@ final class MetricsServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        // The Shared module merges its config at boot, but something resolves Metrics earlier and would read the
+        // defaults (driver=redis, enabled=true) instead of METRICS_DRIVER / METRICS_ENABLED. Merge it here first.
+        $this->mergeConfigFrom(dirname(__DIR__, 2).'/config/config.php', 'shared');
+
         $this->app->singleton(Metrics::class, function (Application $app): Metrics {
             $driver = self::driver();
             $connection = (string) config('shared.metrics.connection', 'metrics');
@@ -62,7 +66,7 @@ final class MetricsServiceProvider extends ServiceProvider
                     strict: false,
                     reset: function () use ($app, $connection): void {
                         $manager = $app->make(RedisFactory::class);
-                        if ($manager instanceof RedisManager) {
+                        if ($manager instanceof RedisManager) { // @phpstan-ignore instanceof.alwaysTrue
                             $manager->purge($connection); // next write re-connects instead of reusing a dead socket
                         }
                     },
@@ -70,7 +74,7 @@ final class MetricsServiceProvider extends ServiceProvider
                 default => throw new InvalidArgumentException('METRICS_DRIVER must be redis|memory|null.'),
             };
         });
-        $this->app->singleton(MetricsStore::class, fn (Application $app): MetricsStore => $app->make(Metrics::class) instanceof MetricsStore ? $app->make(Metrics::class) : new NullMetrics);
+        $this->app->singleton(MetricsStore::class, fn (Application $app): MetricsStore => $app->make(Metrics::class) instanceof MetricsStore ? $app->make(Metrics::class) : new NullMetrics); // @phpstan-ignore instanceof.alwaysTrue
 
         $this->app->singleton(ScrapeCache::class, fn (Application $app): ScrapeCache => new ScrapeCache(
             $app->make(RedisFactory::class),

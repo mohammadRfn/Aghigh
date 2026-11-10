@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Str;
+use Illuminate\Testing\TestResponse;
 use Modules\Shared\Contracts\Metrics;
 use Modules\Shared\Metrics\Failures;
 use Modules\Shared\Metrics\MetricsStore;
@@ -15,7 +16,7 @@ use Modules\Shared\Metrics\Names;
 
 const METRICS_TEST_TOKEN = 'test-metrics-token-0123456789';
 
-function metricsRequest(?string $token = METRICS_TEST_TOKEN): Illuminate\Testing\TestResponse
+function metricsRequest(?string $token = METRICS_TEST_TOKEN): TestResponse
 {
     $headers = $token === null ? [] : ['Authorization' => 'Bearer '.$token];
 
@@ -57,7 +58,7 @@ it('serves the text exposition with the right token, no-store and the 0.0.4 cont
 
     $body = $response->getContent();
     expect($body)->toContain('# TYPE '.Names::HTTP_REQUESTS.' counter')
-        ->and($body)->toContain(Names::HTTP_REQUESTS.'{route="shared.ping",method="GET",status_class="2xx"} 1')
+        ->and($body)->toContain(Names::HTTP_REQUESTS.'{route="api.v1.shared.ping",method="GET",status_class="2xx"} 1')
         ->and($body)->toContain('# TYPE '.Names::HTTP_DURATION.' histogram')
         ->and($body)->toContain(Names::SCRAPE_BACKEND_UP.' 1')
         ->and($body)->toContain(Names::SCRAPE_SERIES.' ')

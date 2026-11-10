@@ -102,6 +102,7 @@ monitoring-role: ## Create/refresh the monitoring role and GlitchTip db/role on 
 
 obs-up: init ## Start the default stack + the observability profile (needs make obs-keys and make monitoring-role first)
 > @test -s docker/observability/secrets/metrics_token || { echo "docker/observability/secrets/metrics_token is missing: run make obs-keys"; exit 1; }
+> @for v in GRAFANA_ADMIN_PASSWORD GLITCHTIP_SECRET_KEY GLITCHTIP_DB_PASSWORD DB_MONITOR_PASSWORD METRICS_TOKEN; do grep -qE "^$$v=.+" .env.docker || { echo "$$v is empty in .env.docker: run make obs-keys"; exit 1; }; done
 > $(OBS) up -d --scale reverb=$(REVERB_SCALE)
 
 obs-down: ## Stop and remove ONLY the observability services (default stack and data volumes stay). Run before a latency baseline.

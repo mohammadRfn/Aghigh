@@ -15,7 +15,7 @@ final class NullMetrics implements Metrics, MetricsStore
 
     public function histogram(string $name, float|int $value, array $labels = []): void {}
 
-    public function render(): ?string
+    public function render(): string
     {
         return '';
     }
