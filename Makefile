@@ -101,7 +101,7 @@ monitoring-role: ## Create/refresh the monitoring role and GlitchTip db/role on 
 > @$(DC) exec -T -e DB_MONITOR_USER=$(DB_MONITOR_USER) -e DB_MONITOR_PASSWORD=$(DB_MONITOR_PASSWORD) -e GLITCHTIP_DB_USER=$(GLITCHTIP_DB_USER) -e GLITCHTIP_DB_NAME=$(GLITCHTIP_DB_NAME) -e GLITCHTIP_DB_PASSWORD=$(GLITCHTIP_DB_PASSWORD) postgres bash /docker-entrypoint-initdb.d/02-observability-roles.sh
 
 obs-up: init ## Start the default stack + the observability profile (needs make obs-keys and make monitoring-role first)
-> @test -s docker/observability/secrets/metrics_token || { echo "docker/observability/secrets/metrics_token is missing: run make obs-keys"; exit 1; }
+> @test -f docker/observability/secrets/metrics_token -a -s docker/observability/secrets/metrics_token || { echo "docker/observability/secrets/metrics_token is missing: run make obs-keys"; exit 1; }
 > @for v in GRAFANA_ADMIN_PASSWORD GLITCHTIP_SECRET_KEY GLITCHTIP_DB_PASSWORD DB_MONITOR_PASSWORD METRICS_TOKEN; do grep -qE "^$$v=.+" .env.docker || { echo "$$v is empty in .env.docker: run make obs-keys"; exit 1; }; done
 > $(OBS) up -d --scale reverb=$(REVERB_SCALE)
 
