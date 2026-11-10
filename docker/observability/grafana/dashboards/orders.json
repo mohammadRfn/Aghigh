@@ -566,7 +566,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "histogram_quantile(0.50, sum by (le) (rate(aghigh_http_request_duration_seconds_bucket{route=\"ordering.orders.store\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(aghigh_http_request_duration_seconds_bucket{route=\"api.v1.ordering.orders.store\"}[$__rate_interval])))",
           "legendFormat": "p50",
           "range": true
         },
@@ -576,7 +576,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(aghigh_http_request_duration_seconds_bucket{route=\"ordering.orders.store\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(aghigh_http_request_duration_seconds_bucket{route=\"api.v1.ordering.orders.store\"}[$__rate_interval])))",
           "legendFormat": "p95",
           "range": true
         },
@@ -586,7 +586,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(aghigh_http_request_duration_seconds_bucket{route=\"ordering.orders.store\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(aghigh_http_request_duration_seconds_bucket{route=\"api.v1.ordering.orders.store\"}[$__rate_interval])))",
           "legendFormat": "p99",
           "range": true
         }
@@ -656,7 +656,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (status_class) (rate(aghigh_http_requests_total{route=\"ordering.orders.store\"}[$__rate_interval]))",
+          "expr": "sum by (status_class) (rate(aghigh_http_requests_total{route=\"api.v1.ordering.orders.store\"}[$__rate_interval]))",
           "legendFormat": "{{status_class}}",
           "range": true
         }

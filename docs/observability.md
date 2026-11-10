@@ -122,7 +122,7 @@ reported through the worker's `report()` path with the same hook. `send_default_
 Worked example (the ids below come from a dry run of the commands; replace with yours):
 1. Make a request and keep its id: `curl -si localhost:8000/api/v1/shared/ping | grep -i x-request-id` ->
    `X-Request-Id: 0199c8a2-7b1e-7f6a-9c43-2d1f5e6a7b8c`.
-2. Metrics: Grafana "Aghigh / API" shows the route `shared.ping` in "Requests/s by route" and its latency in
+2. Metrics: Grafana "Aghigh / API" shows the route `api.v1.shared.ping` in "Requests/s by route" and its latency in
    "p95 by route". Metrics never carry the id (bounded labels), they tell you WHEN and WHICH ROUTE.
 3. Logs: paste the id into the dashboard variable `request_id` and click a latency/error panel -> data link
    "Loki: follow request_id" opens Explore with
@@ -151,7 +151,7 @@ Provisioned from `docker/observability/grafana/dashboards/*.json` (folder "Aghig
   `reverb_scrape_up`; broadcast wait/runtime; broadcasting-auth and chat limiter hits; chat messages/claims/closes;
   per-replica ESTABLISHED sockets from cAdvisor if present.
 - **Orders**: outcomes (24h stats, rate, 1h totals), POST /orders latency and status classes (route
-  `ordering.orders.store`), orders limiters, idempotency cache errors, the orders queue (depth, wait, runtime,
+  `api.v1.ordering.orders.store`), orders limiters, idempotency cache errors, the orders queue (depth, wait, runtime,
   failures), payment webhook traffic.
 Data links on latency/error panels open Loki filtered by the `request_id` dashboard variable, app errors, or
 Traefik 5xx for the panel's time range.

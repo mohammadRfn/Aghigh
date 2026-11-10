@@ -1,4 +1,4 @@
-# make obs-verify inventory: Tue Nov 10 11:10:23 UTC 2026 Linux MohammadRaufian 6.18.58.1-microsoft-standard-WSL2 #1 SMP PREEMPT_DYNAMIC Tue Oct 27 00:24:11 UTC 2026 x86_64 GNU/Linux c31ff1d
+# make obs-verify inventory: Tue Nov 10 11:37:03 UTC 2026 Linux MohammadRaufian 6.18.58.1-microsoft-standard-WSL2 #1 SMP PREEMPT_DYNAMIC Tue Oct 27 00:24:11 UTC 2026 x86_64 GNU/Linux d240b8b
 ## scrape targets
       1 "health":"up"	"job":"app"}
       1 "health":"up"	"job":"grafana"}
@@ -19,17 +19,17 @@
       1 "job":"redis-queue"}	"job":"redis-queue"}
       1 "job":"traefik"}	"health":"up"
 ## series per job
-app: 372 series
-traefik: 284 series
-node: 1180 series
+app: 591 series
+traefik: 286 series
+node: 1396 series
 cadvisor: 68 series
-postgres: 1476 series
+postgres: 1478 series
 pgbouncer: 129 series
-redis-queue: 1148 series
-redis-cache: 446 series
-loki: 1418 series
-alloy: 258 series
-grafana: 2630 series
+redis-queue: 1245 series
+redis-cache: 497 series
+loki: 1463 series
+alloy: 272 series
+grafana: 2659 series
 prometheus: 1241 series
 ## cadvisor metric names present
 ## cadvisor compose services seen
@@ -37,8 +37,58 @@ prometheus: 1241 series
   data:## reverb ESTABLISHED via cadvisor tcp (empty = gap on this host)
 {"status":"success","data":{"resultType":"vector","result":[]}}
 ## node_exporter filesystems
+  "mountpoint":"/"
+  "mountpoint":"/Docker/host"
+  "mountpoint":"/init"
+  "mountpoint":"/mnt/c"
+  "mountpoint":"/mnt/d"
+  "mountpoint":"/mnt/wsl"
+  "mountpoint":"/mnt/wsl/docker-desktop-bind-mounts/Ubuntu-26.04/10bf2897b33acd74002e5ed9fcf668e393fcabd332a94cc32b6c329df1da155a"
+  "mountpoint":"/mnt/wsl/docker-desktop-bind-mounts/Ubuntu-26.04/10bf2897b33acd74002e5ed9fcf668e393fcabd332a94cc32b6c329df1da155a/credentials/getty@tty1.service"
+  "mountpoint":"/mnt/wsl/docker-desktop-bind-mounts/Ubuntu-26.04/10bf2897b33acd74002e5ed9fcf668e393fcabd332a94cc32b6c329df1da155a/credentials/systemd-journald.service"
+  "mountpoint":"/mnt/wsl/docker-desktop-bind-mounts/Ubuntu-26.04/10bf2897b33acd74002e5ed9fcf668e393fcabd332a94cc32b6c329df1da155a/credentials/systemd-resolved.service"
+  "mountpoint":"/mnt/wsl/docker-desktop-bind-mounts/Ubuntu-26.04/10bf2897b33acd74002e5ed9fcf668e393fcabd332a94cc32b6c329df1da155a/lock"
+  "mountpoint":"/mnt/wsl/docker-desktop-bind-mounts/Ubuntu-26.04/10bf2897b33acd74002e5ed9fcf668e393fcabd332a94cc32b6c329df1da155a/shm"
+  "mountpoint":"/mnt/wsl/docker-desktop-bind-mounts/Ubuntu-26.04/10bf2897b33acd74002e5ed9fcf668e393fcabd332a94cc32b6c329df1da155a/user"
+  "mountpoint":"/mnt/wsl/docker-desktop-bind-mounts/Ubuntu-26.04/10bf2897b33acd74002e5ed9fcf668e393fcabd332a94cc32b6c329df1da155a/user/0"
+  "mountpoint":"/mnt/wsl/docker-desktop-bind-mounts/Ubuntu-26.04/10bf2897b33acd74002e5ed9fcf668e393fcabd332a94cc32b6c329df1da155a/user/1000"
+  "mountpoint":"/mnt/wsl/docker-desktop-bind-mounts/Ubuntu-26.04/16f7fd513b8efa1a7f653b38ac8c52d61348deb50a8db8f889cb7086c1094c71"
+  "mountpoint":"/mnt/wsl/docker-desktop-bind-mounts/Ubuntu-26.04/1e105006729bea0462f1db810889af84d84f48efbe1c28c4fe1b3c782abb9d84"
+  "mountpoint":"/mnt/wsl/docker-desktop-bind-mounts/Ubuntu-26.04/37631ebdfe711a1c7eff67d3da204be739f73d29fe37a1fb6b84987d20a4d64c"
+  "mountpoint":"/mnt/wsl/docker-desktop-bind-mounts/Ubuntu-26.04/4269d3f4b4123996981f354f79562d38561854d39c1195406d58bc4b98be6b17"
+  "mountpoint":"/mnt/wsl/docker-desktop-bind-mounts/Ubuntu-26.04/71ad1dfa1de556decbd6d7314196552e349d66067b49ab6bf8d4865faa663441/sys/fs/binfmt_misc/status"
+  "mountpoint":"/mnt/wsl/docker-desktop-bind-mounts/Ubuntu-26.04/85c72baabd17d4a9baeda44a2fe12366279b6d035ac1306e66e88b9fec633739"
+  "mountpoint":"/mnt/wsl/docker-desktop-bind-mounts/Ubuntu-26.04/8a5edab282632443219e051e4ade2d1d5bbc671c781051bf1437897cbdfea0f1"
+  "mountpoint":"/mnt/wsl/docker-desktop-bind-mounts/Ubuntu-26.04/995957ea5ae94347d166f1bcd6283cc67659b880c465fd7ae21dcc9a9ca01600"
+  "mountpoint":"/mnt/wsl/docker-desktop-bind-mounts/Ubuntu-26.04/9e84cc8e24e18788556b74508ac5355acd56ac7d65845f5578a21dd189e45a04"
+  "mountpoint":"/mnt/wsl/docker-desktop-bind-mounts/Ubuntu-26.04/c1a43d27e4f3eae72fd4bd900fbca0828fe54bbff18d01654104ca1cb788f452"
+  "mountpoint":"/mnt/wsl/docker-desktop-bind-mounts/Ubuntu-26.04/c6cee83c865dcf16f277c93306d6a29ae4a61465a48d5acde30e9425ad6519bd"
+  "mountpoint":"/mnt/wsl/docker-desktop-bind-mounts/Ubuntu-26.04/docker.sock"
+  "mountpoint":"/mnt/wsl/docker-desktop-bind-mounts/Ubuntu-26.04/e348afe1f9e9ed447429ced1a8d7285f35d8c3f7552c105b267efa89add9519a"
+  "mountpoint":"/mnt/wsl/docker-desktop-bind-mounts/Ubuntu-26.04/f093d213f42559c50600d1503afd5880c41509854c3c5fd49eeec72b60439666"
+  "mountpoint":"/mnt/wsl/docker-desktop-bind-mounts/Ubuntu-26.04/f592b462c534ef477d8029e1570cd54e4514a65a07e0d6ac56480a6f5ce6fd5c"
+  "mountpoint":"/mnt/wsl/docker-desktop/shared-sockets/guest-services"
+  "mountpoint":"/mnt/wsl/docker-desktop/shared-sockets/host-services"
+  "mountpoint":"/mnt/wslg"
+  "mountpoint":"/mnt/wslg/distro"
+  "mountpoint":"/mnt/wslg/run/user/0"
+  "mountpoint":"/mnt/wslg/run/user/1000"
+  "mountpoint":"/run"
+  "mountpoint":"/run/credentials/getty@tty1.service"
+  "mountpoint":"/run/credentials/systemd-journald.service"
+  "mountpoint":"/run/credentials/systemd-resolved.service"
+  "mountpoint":"/run/lock"
+  "mountpoint":"/run/shm"
+  "mountpoint":"/run/user"
+  "mountpoint":"/run/user/0"
+  "mountpoint":"/run/user/1000"
+  "mountpoint":"/tmp"
+  "mountpoint":"/tmp/.X11-unix"
+  "mountpoint":"/usr/lib/wsl/drivers"
+  "mountpoint":"/usr/src/linux-headers-6.18.58.1-microsoft-standard-WSL2"
+  "mountpoint":"/var/lib/docker"
 ## one Traefik access-log line (check the request-id field name)
-{"ClientAddr":"172.30.0.11:49576","ClientHost":"172.30.0.11","ClientPort":"49576","ClientUsername":"-","DownstreamContentSize":35,"DownstreamStatus":200,"Duration":1961075,"OriginContentSize":35,"OriginDuration":1862771,"OriginStatus":200,"Overhead":98304,"RequestAddr":"traefik","RequestContentSize":0,"RequestCount":204,"RequestHost":"traefik","RequestMethod":"GET","RequestPath":"/api/v1/ordering/ping","RequestPort":"-","RequestProtocol":"HTTP/1.1","RequestScheme":"http","RetryAttempts":0,"RouterName":"app@file","ServiceAddr":"app:8000","ServiceName":"app@file","ServiceURL":"http://app:8000","StartLocal":"2026-11-10T11:09:33.627902432Z","StartUTC":"2026-11-10T11:09:33.627902432Z","downstream_X-Request-Id":"01a1c526-243c-72d0-894e-38c8666d8fef","entryPointName":"web","level":"info","msg":"","origin_X-Request-Id":"01a1c526-243c-72d0-894e-38c8666d8fef","time":"2026-11-10T11:09:33Z"}
+{"ClientAddr":"172.30.0.11:50318","ClientHost":"172.30.0.11","ClientPort":"50318","ClientUsername":"-","DownstreamContentSize":35,"DownstreamStatus":200,"Duration":3955756,"OriginContentSize":35,"OriginDuration":3870349,"OriginStatus":200,"Overhead":85407,"RequestAddr":"traefik","RequestContentSize":0,"RequestCount":632,"RequestHost":"traefik","RequestMethod":"GET","RequestPath":"/api/v1/ordering/ping","RequestPort":"-","RequestProtocol":"HTTP/1.1","RequestScheme":"http","RetryAttempts":0,"RouterName":"app@file","ServiceAddr":"app:8000","ServiceName":"app@file","ServiceURL":"http://app:8000","StartLocal":"2026-11-10T11:35:43.857553163Z","StartUTC":"2026-11-10T11:35:43.857553163Z","downstream_X-Request-Id":"01a1c53e-19f3-7165-b2bf-318230064a95","entryPointName":"web","level":"info","msg":"","origin_X-Request-Id":"01a1c53e-19f3-7165-b2bf-318230064a95","time":"2026-11-10T11:35:43Z"}
   (none yet)
 ## one app JSON log line (check where request_id lives: extra vs context)
   (none yet)

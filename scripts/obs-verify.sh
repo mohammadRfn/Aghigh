@@ -88,12 +88,12 @@ mkdir -p docs/perf
   echo "## cadvisor metric names present"; curl -s "$PROM/api/v1/label/__name__/values?match[]=%7Bjob%3D%22cadvisor%22%7D" | tr ',' '\n' | tr -d '"[]{}' | grep -E '^container_' | sort
   echo "## cadvisor compose services seen"; curl -s "$PROM/api/v1/label/container_label_com_docker_compose_service/values" | tr -d '"[]{}' | tr ',' '\n' | sed 's/^/  /'
   echo "## reverb ESTABLISHED via cadvisor tcp (empty = gap on this host)"; curl -s "$PROM/api/v1/query?query=container_network_tcp_usage_total%7Bcontainer_label_com_docker_compose_service%3D%22reverb%22%2Ctcp_state%3D%22established%22%7D"; echo
-  echo "## node_exporter filesystems"; curl -s "$PROM/api/v1/query?query=node_filesystem_size_bytes" | tr '{' '\n' | grep -o 'mountpoint="[^"]*"' | sort -u | sed 's/^/  /'
+  echo "## node_exporter filesystems"; curl -s "$PROM/api/v1/query?query=node_filesystem_size_bytes" | tr '{' '\n' | grep -o '"mountpoint":"[^"]*"' | sort -u | sed 's/^/  /'
   echo "## one Traefik access-log line (check the request-id field name)"; $DC logs --no-log-prefix --no-color --tail=200 traefik 2>/dev/null | grep -m1 'RequestPath' || echo "  (none yet)"
   echo "## one app JSON log line (check where request_id lives: extra vs context)"; $DC logs --no-log-prefix --no-color --tail=500 app 2>/dev/null | grep -m1 'request_id' || echo "  (none yet)"
   echo "## alerts (state)"; curl -s "$PROM/api/v1/alerts" | tr '{' '\n' | grep -oE '"alertname":"[^"]+"|"state":"[^"]+"' | paste - - | sort | uniq -c
 } > docs/perf/obs-inventory.txt 2>&1 || true
-sed -n '1,40p' docs/perf/obs-inventory.txt
+sed -n '1,120p' docs/perf/obs-inventory.txt
 
 echo "== 6) rules loaded and healthy"
 rules="$(curl -s "$PROM/api/v1/rules")"
