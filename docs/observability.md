@@ -97,17 +97,31 @@ in front of Alloy, listed in Open decisions.
 Labels: `service`, `channel`, `level` only (`max_streams_per_user: 1000`); `request_id` is STRUCTURED METADATA,
 queried with `| request_id="..."`, never a label. Retention 168h, ingestion 4 MB/s burst 8 MB (provisional, env).
 Traefik's access log keeps the response header: `--accesslog.fields.headers.names.X-Request-Id=keep`; in JSON the
-response header field is expected as `downstream_X-Request-Id` (`UNTESTED`: step 5 of `make obs-verify` prints one
-real line; if the key differs, fix the `stage.json` expression in `config.alloy`).
+response header field is `downstream_X-Request-Id` (verified on a real line).
 
-### Confirm the log shape before trusting the pipeline (`UNTESTED`)
-The app logs JSON (Monolog `JsonFormatter`, processors `PsrLogMessageProcessor` + `RedactSensitiveData`). Laravel's
-`Context` data is appended to records as `extra` (docs: "context data is added to log metadata"), so the pipeline
-reads `extra.request_id` and falls back to `context.request_id`. Read one real line first:
-```
-docker compose --env-file .env.docker logs --no-log-prefix --tail=500 app | grep -m1 request_id | jq .
-```
-If `request_id` sits elsewhere, change the two `stage.json` expressions in `docker/observability/alloy/config.alloy`.
+### Two log sources (observed on Docker Desktop/WSL2)
+Observed: JSON that the app workers write to `php://stdout` or `php://stderr` does not appear in `docker logs app`
+(a failed login produced no line), while the Octane request lines do. Pointing the stream at `/proc/1/fd/1` made
+it worse: the stream could not be opened ("No such file or directory") and Monolog's `UnexpectedValueException`
+turned the request into a 500. Likely cause, NOT confirmed in the Octane source: `octane:start` runs FrankenPHP as a
+child process and processes its output itself. Whatever the cause, the file route works: each service writes its
+own JSON file (`LOG_JSON_STREAM=/app/storage/logs/<service>.jsonl`, set per service in `compose.yaml`;
+`storage/logs` is a bind mount and git-ignored) and Alloy tails them (`local.file_match` + `loki.source.file`,
+mounted read-only at `/var/log/aghigh`); the file name becomes the `service` label. The Docker socket source stays
+for Traefik and for the plain lines (Octane request log, `schedule:work` output; they get `channel=stdout`,
+`level=unknown`). `make test` and `make test-int` pass `LOG_JSON_STREAM=php://stdout` so test logs never reach the
+files or Loki.
+
+Known gaps (dev stack): the `*.jsonl` files grow without rotation (a later task); a log stream that cannot be
+opened still fails the request (Monolog throws), which a production handler should swallow.
+
+Log shape, verified on real lines: `request_id` lives in `extra`, and Traefik's access line carries
+`downstream_X-Request-Id`. One id finds the Traefik line and the app lines (security, local) in one Loki query:
+
+    curl -s -G localhost:3100/loki/api/v1/query_range --data-urlencode 'query={service=~"app|traefik"} |= "<request id>"' --data-urlencode since=10m
+
+Observation: a plain 401 is logged at ERROR on the `local` channel (the default handler reports `IdentityProblem`),
+so client errors add ERROR noise to Loki; Sentry already drops 4xx.
 
 ## Errors (Phase 3)
 `sentry/sentry-laravel` 4.29 was already in composer.json; this task publishes `config/sentry.php` and wires

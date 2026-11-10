@@ -42,6 +42,28 @@ loki.source.docker "compose" {
   forward_to       = [loki.process.pipeline.receiver]
 }
 
+// App JSON logs. Octane (octane:start) swallows the FrankenPHP workers' stdout/stderr, so LOG_JSON_STREAM points each
+// service at /app/storage/logs/<service>.jsonl (compose.yaml) and Alloy tails them; the file name is the service label.
+local.file_match "app_json" {
+  path_targets = [{"__path__" = "/var/log/aghigh/*.jsonl"}]
+}
+
+discovery.relabel "app_json" {
+  targets = local.file_match.app_json.targets
+
+  rule {
+    source_labels = ["__path__"]
+    regex         = "/var/log/aghigh/(.+)\\.jsonl"
+    target_label  = "service"
+    replacement   = "$1"
+  }
+}
+
+loki.source.file "app_json" {
+  targets    = discovery.relabel.app_json.output
+  forward_to = [loki.process.pipeline.receiver]
+}
+
 loki.process "pipeline" {
   forward_to = [loki.write.local.receiver]
 
@@ -60,7 +82,7 @@ loki.process "pipeline" {
     // Fallback when request_id turned out to live in context instead of extra (confirm with a real line).
     stage.template {
       source   = "request_id"
-      template = "{{ if .Value }}{{ .Value }}{{ else }}{{ .request_id_ctx }}{{ end }}"
+      template = "{{ if .Value }}{{ .Value }}{{ else if .request_id_ctx }}{{ .request_id_ctx }}{{ end }}"
     }
     stage.template {
       source   = "level"
@@ -103,6 +125,10 @@ loki.process "pipeline" {
       channel = "",
       level   = "",
     }
+  }
+
+  stage.label_drop {
+    values = ["filename"]
   }
 
   stage.structured_metadata {

@@ -12,7 +12,7 @@ x-app: &app
   env_file:
     - .env
     - .env.docker
-  environment:
+  environment: &app-env
     DB_CONNECTION: pgsql
     DB_HOST: pgbouncer
     DB_PORT: "5432"
@@ -104,6 +104,9 @@ services:
 
   app:
     <<: *app
+    environment:
+      <<: *app-env
+      LOG_JSON_STREAM: /app/storage/logs/app.jsonl
     build:
       context: .
       target: dev
@@ -133,6 +136,9 @@ services:
 
   horizon:
     <<: *app
+    environment:
+      <<: *app-env
+      LOG_JSON_STREAM: /app/storage/logs/horizon.jsonl
     command: ["php", "artisan", "horizon"]
     # > the longest job timeout (100 s supervisor default) so a deploy lets running jobs finish.
     stop_grace_period: 110s
@@ -151,6 +157,9 @@ services:
   # (REVERB_SCALING_ENABLED, config/reverb.php). Docker DNS returns every replica for "reverb".
   reverb:
     <<: *app
+    environment:
+      <<: *app-env
+      LOG_JSON_STREAM: /app/storage/logs/reverb.jsonl
     command: ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080"]
     networks: [edge, backend]
     # Each WebSocket is a file descriptor. With ext-uv the loop can use them; with stream_select the loop itself
@@ -170,6 +179,9 @@ services:
 
   scheduler:
     <<: *app
+    environment:
+      <<: *app-env
+      LOG_JSON_STREAM: /app/storage/logs/scheduler.jsonl
     command: ["php", "artisan", "schedule:work"]
     healthcheck:
       disable: true
@@ -401,6 +413,8 @@ services:
       - /etc/alloy/config.alloy
     volumes:
       - ./docker/observability/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      # App JSON logs (Octane swallows worker stdout/stderr, so the app writes files): one <service>.jsonl each.
+      - ./storage/logs:/var/log/aghigh:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - alloy-data:/var/lib/alloy/data
     depends_on:
