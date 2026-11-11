@@ -132,6 +132,16 @@ not-found) and scrubs with the shared `SensitiveKeys` list, tags `request_id` fr
 reported through the worker's `report()` path with the same hook. `send_default_pii=false`,
 `traces_sample_rate` default 0.0 (capped at 0.05 in config), release from `GIT_SHA`.
 
+### GlitchTip in Postgres-only mode (observed)
+`GLITCHTIP_VALKEY_URL` empty means no Redis, and GlitchTip then keeps its cache in a database table. `migrate` does
+not create it: the first login failed with HTTP 500 (`relation "django_cache" does not exist` in the django-allauth
+rate limiter). The `glitchtip-migrate` step therefore also runs `createcachetable`. First-run order: `make obs-up`,
+`createsuperuser`, create an Organization and a Project in the UI, then put the DSN in `.env.docker` with the
+in-network host (`SENTRY_LARAVEL_DSN=http://<key>@glitchtip:8000/<project id>`; the UI shows `localhost:8090`) and
+recreate `app horizon reverb scheduler`. Verified: `\Sentry\captureException(...)` followed by `flush()` from tinker
+produced an issue in GlitchTip's database (`issue_events_issue`). A plain `report()` from tinker did not deliver
+before the process exited (cause not confirmed; the HTTP and queue paths flush themselves).
+
 ## Following one request through metrics, logs and errors
 Worked example (the ids below come from a dry run of the commands; replace with yours):
 1. Make a request and keep its id: `curl -si localhost:8000/api/v1/shared/ping | grep -i x-request-id` ->

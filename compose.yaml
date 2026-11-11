@@ -565,7 +565,7 @@ services:
 
   glitchtip-migrate:
     <<: *glitchtip
-    command: ["./manage.py", "migrate", "--noinput"]
+    command: ["sh", "-c", "./manage.py migrate --noinput && ./manage.py createcachetable"] # Postgres-only mode keeps its cache in a table
     depends_on:
       postgres:
         condition: service_healthy
