@@ -10,9 +10,10 @@ limit is `provisional` configuration; `TODO(measure)` marks what still has to be
 > Rule: run the stack SEPARATELY from latency measurements. `make obs-down` before a baseline; Task 10 measures
 > the cost of app metrics themselves with `METRICS_ENABLED=true|false`.
 
-**Status of this delivery: UNTESTED.** It was written against the pinned sources and the registry tags (listed
-below) but the author could not run Docker. The first `make obs-up && make obs-verify` on a real host is part of
-accepting this task; every item marked `UNTESTED` turns into verified-or-fixed at that moment.
+**Status (2026-11-11, WSL2 + Docker Desktop): verified on a real host** with `make test-int` (61 passed),
+`make verify-proxy`, `make k6 s=smoke` with the profile down, and `make obs-verify` (PASS, 6 rule groups, no unhealthy
+rule). Also observed: `AghighTargetDown` fired after stopping `redis-exporter-cache` for 4 minutes, and GlitchTip
+received both a manual `report()` and a failed Horizon job. Items still marked `UNTESTED` below were not exercised.
 
 ## First run
 ```
@@ -38,7 +39,7 @@ GlitchTip first run (cannot be automated by compose, the DSN is minted by Glitch
 |---|---|---|---|
 | prometheus, grafana, loki, glitchtip | edge + backend | 127.0.0.1 only | `backend` is `internal: true` (no published ports): a UI needs `edge` |
 | alloy, cadvisor, node-exporter, *-exporter, glitchtip-worker/migrate | backend | none | exporters are scraped on `backend` |
-| traefik metrics | entrypoint `metrics` :8082 | none | Prometheus (on `edge`) scrapes `traefik:8082`; flags per Traefik v3 reference, `UNTESTED` |
+| traefik metrics | entrypoint `metrics` :8082 | none | Prometheus (on `edge`) scrapes `traefik:8082`; target `traefik` is `up` with 376 series (2026-11-11) |
 
 Every service: exact image tag (`*_IMAGE` env, `REGISTRY_PREFIX` honoured, `make pull` pulls the profile), `cpus` +
 `mem_limit` env-tunable, `logging: *logging`, `restart: unless-stopped` (`glitchtip-migrate` is a one-shot,
@@ -84,7 +85,8 @@ matches the Task 8 observation (5 reported, 19 sockets ESTABLISHED, 5 subscribed
 (no socket count, no per-replica breakdown) through the Pusher API. Per-replica sockets: cAdvisor's optional
 `tcp` collector (`container_network_tcp_usage_total{tcp_state="established"}`, enabled in compose) if this host
 produces it (see the inventory), otherwise `/proc/net/tcp` inside each replica (`make verify-chat` step 3).
-`TODO(measure)`: run `make obs-verify` and read `docs/perf/obs-inventory.txt` "reverb ESTABLISHED via cadvisor".
+Measured 2026-11-11: "reverb ESTABLISHED via cadvisor tcp" is empty on WSL2 (`docs/perf/obs-inventory.txt`), so use
+the `/proc/net/tcp` fallback.
 
 ## Logs (Phase 3)
 Alloy reads container logs of `app`, `horizon`, `reverb`, `scheduler`, `traefik` through the Docker socket
@@ -221,21 +223,40 @@ pointing to the anchors below (anchor = lower-cased alert name).
   waits for every replica (10 s internally) while the app allows 1 s: a slow replica shows up here first.
 
 ## Resource cost of the stack
-`TODO(measure)` on the real host, idle and during `make k6 s=smoke`:
+Measured 2026-11-11 on the WSL2 host, idle, right after `make obs-up` (not during load; the `make k6 s=smoke`
+run is still to be captured). Command:
 ```
 docker stats --no-stream --format 'table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}' $(docker compose --env-file .env.docker --profile observability ps -q)
 docker system df -v | grep -E 'prometheus-data|loki-data|grafana-data|glitchtip'
 ```
-Record the numbers here with the date and the commit; the `*_CPUS` / `*_MEM_LIMIT` defaults in
-`.env.docker.example` are guesses until then.
+Idle result (observability profile only, `docker stats`, memory / limit):
 
-## WSL2 / Docker Desktop caveats (to confirm on the first run, each `UNTESTED`)
-- cAdvisor: per-container series need the compose labels (`container_label_com_docker_compose_service`); on Docker
+| Service | CPU | Memory |
+|---|---|---|
+| grafana | 0.60% | 166.5 MiB / 384 MiB |
+| glitchtip | 0.00% | 148 MiB / 512 MiB |
+| alloy | 0.74% | 114.4 MiB / 256 MiB |
+| prometheus | 3.16% | 104.9 MiB / 512 MiB |
+| glitchtip-worker | 1.93% | 87.4 MiB / 512 MiB |
+| loki | 1.04% | 77.7 MiB / 512 MiB |
+| cadvisor | 0.00% | 21.4 MiB / 256 MiB |
+| 5 exporters (node, postgres, pgbouncer, 2x redis) | 0.80% total | 8.6-12.7 MiB each / 64 MiB |
+
+The whole profile is about 770 MiB and under 10% of one core at idle. No service is near its limit, so the
+`*_CPUS` / `*_MEM_LIMIT` defaults stand for dev; re-check under load before raising or lowering them.
+
+## WSL2 / Docker Desktop caveats (measured 2026-11-11 unless marked `UNTESTED`)
+- **Measured result:** cAdvisor exposes only 76 series on this host and no `container_*` metrics, and
+  `container_network_tcp_usage_total` (Reverb ESTABLISHED) is empty. Per-container CPU/memory therefore come from
+  `docker stats` (see "Resource cost"), and per-replica sockets from `/proc/net/tcp` inside the replicas
+  (`make verify-chat`). Do not build panels on `container_*` for this host.
+- cAdvisor, original expectation: per-container series need the compose labels (`container_label_com_docker_compose_service`); on Docker
   Desktop the `/var/lib/docker` and `/dev/disk` mounts may be empty and filesystem series missing. The `tcp`
   collector is enabled for the Reverb socket question. `make obs-verify` writes the exact list of `container_*`
   names and the compose services it sees to `docs/perf/obs-inventory.txt`; copy that list here. If nothing shows,
   the documented fallback is `docker stats` (soak test) and `/proc/net/tcp` inside the reverb replicas.
-- node_exporter reports the Docker Desktop VM (its CPU, memory, root disk), not Windows. The disk alert therefore
+- node_exporter reports the Docker Desktop VM (its CPU, memory, root disk), not Windows. It lists dozens of
+  `/mnt/wsl/...` and `/run/...` mountpoints; only `mountpoint="/"` is meaningful for the disk alert. The disk alert therefore
   watches the VM disk, which is what Prometheus/Loki/Postgres volumes fill.
 - Alloy: Docker socket source (see Logs). If `loki.source.docker` shows no targets, check the compose project label
   (`com.docker.compose.project=aghigh`, the compose `name:`).
