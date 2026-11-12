@@ -13,6 +13,7 @@ use Modules\Shared\Exceptions\ProblemDetails;
 use Modules\Shared\Http\Middleware\AssignRequestId;
 use Modules\Shared\Http\Middleware\NoStore;
 use Modules\Shared\Http\Middleware\SecurityHeaders;
+use Modules\Shared\Http\Middleware\ThrottleSlidingPreAuth;
 
 /*
  | Task 7: the client IP used by every per-IP limiter comes from Request::ip() and therefore from Laravel's
@@ -52,8 +53,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->prependToPriorityList(AuthenticatesRequests::class, AdminHeaders::class);
         // Same for Inventory admin (and any route using NoStore): 401/403 must be private, no-store.
         $middleware->prependToPriorityList(AuthenticatesRequests::class, NoStore::class);
-        // Limiters (throttle.sliding / concurrency.cap) are deliberately NOT in the priority list: the same class
-        // runs pre-auth (per IP) and post-auth (per user), so declared route order is the order (see Ordering routes).
+        // Pre-auth per-IP limiter: ThrottleSliding cannot be listed (same class also runs post-auth, per user), so
+        // the pre-auth variant is its own class. Without this, the priority sort moved auth:api ahead of an unlisted
+        // limiter (SubstituteBindings from the api group is listed after auth), so floods reached the JWT guard.
+        // Must stay after the NoStore line above so NoStore still wraps it.
+        $middleware->prependToPriorityList(AuthenticatesRequests::class, ThrottleSlidingPreAuth::class);
+        // Post-auth limiters (throttle.sliding / concurrency.cap) are deliberately NOT in the priority list.
         // API only: there is no "login" web route. Laravel's default guest redirect calls route('login'),
         // which turned a missing token without an Accept header into a 500 instead of a 401.
         $middleware->redirectGuestsTo(null);

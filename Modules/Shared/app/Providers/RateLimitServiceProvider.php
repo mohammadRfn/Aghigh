@@ -16,6 +16,7 @@ use Modules\Shared\Contracts\ConcurrencyLimiter;
 use Modules\Shared\Contracts\SlidingWindowLimiter;
 use Modules\Shared\Http\Middleware\ConcurrencyCap;
 use Modules\Shared\Http\Middleware\ThrottleSliding;
+use Modules\Shared\Http\Middleware\ThrottleSlidingPreAuth;
 use Modules\Shared\RateLimiting\InMemoryConcurrencyLimiter;
 use Modules\Shared\RateLimiting\InMemorySlidingWindowLimiter;
 use Modules\Shared\RateLimiting\LimiterRegistry;
@@ -73,6 +74,7 @@ final class RateLimitServiceProvider extends ServiceProvider
         }
 
         $router->aliasMiddleware('throttle.sliding', ThrottleSliding::class);
+        $router->aliasMiddleware('throttle.sliding.pre', ThrottleSlidingPreAuth::class);
         $router->aliasMiddleware('concurrency.cap', ConcurrencyCap::class);
     }
 
