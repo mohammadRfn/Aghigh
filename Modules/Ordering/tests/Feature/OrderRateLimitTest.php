@@ -16,6 +16,7 @@ use Modules\Shared\Events\RateLimitHit;
 use Modules\Shared\Exceptions\RateLimitExceeded;
 use Modules\Shared\Http\Middleware\ConcurrencyCap;
 use Modules\Shared\Http\Middleware\ThrottleSliding;
+use Modules\Shared\Http\Middleware\ThrottleSlidingPreAuth;
 use Tests\Support\Actors;
 use Tests\Support\OrderingTesting;
 use Tests\Support\RateLimitTesting;
@@ -45,7 +46,7 @@ it('orders the middleware: per-IP limiter -> auth -> per-user limiter -> concurr
         return (int) $index;
     };
 
-    expect($position(ThrottleSliding::class.':orders-ip'))->toBeLessThan($position($auth))
+    expect($position(ThrottleSlidingPreAuth::class.':orders-ip'))->toBeLessThan($position($auth))
         ->and($position($auth))->toBeLessThan($position(ThrottleSliding::class.':orders'))
         ->and($position(ThrottleSliding::class.':orders'))->toBeLessThan($position(ConcurrencyCap::class.':orders'))
         ->and($position(ConcurrencyCap::class.':orders'))->toBeLessThan($position(RequireIdempotencyKey::class));

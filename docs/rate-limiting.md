@@ -53,7 +53,7 @@ per minute.
 
 Pre-auth limiters run before `auth:api`, so a flood from one IP is rejected without hitting the JWT guard
 or the database. Order of middleware on `POST /orders`:
-`throttle.sliding:orders-ip -> auth:api -> throttle.sliding:orders -> concurrency.cap:orders -> RequireIdempotencyKey`.
+`throttle.sliding.pre:orders-ip -> auth:api -> throttle.sliding:orders -> concurrency.cap:orders -> RequireIdempotencyKey`.
 A 429 is thrown as an exception, so nothing after it runs: no idempotency row, no cache entry.
 
 ## 3. Algorithms compared
