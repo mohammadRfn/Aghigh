@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Modules\Shared\Logging\RedactSensitiveData;
+use Modules\Shared\Logging\SwallowHandlerFailures;
 use Monolog\Formatter\JsonFormatter;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
@@ -17,6 +18,7 @@ $json = static fn (string $name, string $level): array => [
     'handler_with' => ['stream' => env('LOG_JSON_STREAM', 'php://stdout')],
     'formatter' => JsonFormatter::class,
     'processors' => [PsrLogMessageProcessor::class, RedactSensitiveData::class],
+    'tap' => [SwallowHandlerFailures::class], // a log failure must never turn a request into a 500
 ];
 
 return [
