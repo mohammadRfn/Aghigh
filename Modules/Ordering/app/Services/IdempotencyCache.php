@@ -6,6 +6,8 @@ namespace Modules\Ordering\Services;
 
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Modules\Shared\Contracts\Metrics;
+use Modules\Shared\Metrics\Names;
 use Throwable;
 
 /**
@@ -21,6 +23,7 @@ final class IdempotencyCache
         try {
             $value = Cache::store('state')->get(self::key($userId, $key));
         } catch (Throwable $error) {
+            self::countError();
             Log::channel('app')->warning('idempotency cache read failed; falling back to the database', ['error' => $error->getMessage()]);
 
             return null;
@@ -42,8 +45,15 @@ final class IdempotencyCache
                 max(60, (int) config('ordering.idempotency_cache_ttl_seconds')),
             );
         } catch (Throwable $error) {
+            self::countError();
             Log::channel('app')->warning('idempotency cache write failed; database row remains authoritative', ['error' => $error->getMessage()]);
         }
+    }
+
+    /** Task 9: aghigh_state_store_errors_total{component="idempotency"}; the contract never throws. */
+    private static function countError(): void
+    {
+        app(Metrics::class)->counter(Names::STATE_STORE_ERRORS, ['component' => 'idempotency']);
     }
 
     private static function key(string $userId, string $key): string

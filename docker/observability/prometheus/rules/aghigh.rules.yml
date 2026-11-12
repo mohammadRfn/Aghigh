@@ -1,0 +1,140 @@
+# Task 9 alert rules. EVERY threshold is provisional configuration (nothing here was measured): tune after the
+# Task 10 baseline. Runbooks: docs/observability.md#alerts (anchor = alert name). No Alertmanager in dev.
+# Keep each `expr` on ONE line: scripts/obs-query-check.php extracts them by regex for make obs-verify.
+groups:
+  - name: aghigh-http
+    rules:
+      - alert: AghighHttp5xxRateHigh
+        expr: (sum(rate(aghigh_http_requests_total{status_class="5xx"}[5m])) / sum(rate(aghigh_http_requests_total[5m]))) > 0.02
+        for: 5m
+        labels: {severity: critical}
+        annotations:
+          summary: "More than 2% of HTTP requests answered 5xx over 5 minutes (provisional threshold)."
+          runbook: "docs/observability.md#aghighhttp5xxratehigh"
+      - alert: AghighHttpP95LatencyHigh
+        expr: histogram_quantile(0.95, sum by (le) (rate(aghigh_http_request_duration_seconds_bucket[5m]))) > 0.5
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "HTTP p95 latency above 500 ms for 10 minutes (provisional; Task 10 sets the real budget)."
+          runbook: "docs/observability.md#aghighhttpp95latencyhigh"
+      - alert: AghighMetricsWriteFailures
+        expr: increase(aghigh_metrics_write_failures_total[10m]) > 0
+        for: 0m
+        labels: {severity: warning}
+        annotations:
+          summary: "PHP processes failed to write metrics to the metrics Redis db in the last 10 minutes."
+          runbook: "docs/observability.md#aghighmetricswritefailures"
+      - alert: AghighMetricsBackendDown
+        expr: aghigh_metrics_backend_up == 0
+        for: 2m
+        labels: {severity: warning}
+        annotations:
+          summary: "The app cannot read its metrics storage (redis-queue db REDIS_METRICS_DB): app metrics are missing."
+          runbook: "docs/observability.md#aghighmetricsbackenddown"
+
+  - name: aghigh-queues
+    rules:
+      - alert: AghighQueueDepthHigh
+        expr: aghigh_queue_pending_jobs > 500
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "Queue {{ $labels.queue }} has more than 500 pending jobs for 5 minutes (provisional)."
+          runbook: "docs/observability.md#aghighqueuedepthhigh"
+      - alert: AghighQueueOldestPendingOld
+        expr: aghigh_queue_oldest_pending_age_seconds > 60
+        for: 2m
+        labels: {severity: warning}
+        annotations:
+          summary: "The oldest pending job on {{ $labels.queue }} is older than 60 s (exact age, from the payload)."
+          runbook: "docs/observability.md#aghighqueueoldestpendingold"
+      - alert: AghighQueueEstimatedWaitHigh
+        expr: aghigh_queue_estimated_wait_seconds > 60
+        for: 5m
+        labels: {severity: info}
+        annotations:
+          summary: "Horizon ESTIMATES more than 60 s of wait on {{ $labels.queue }} (an estimate, not a measurement)."
+          runbook: "docs/observability.md#aghighqueueestimatedwaithigh"
+      - alert: AghighQueueJobsFailing
+        expr: sum by (queue, job) (increase(aghigh_queue_jobs_failed_total[15m])) > 5
+        for: 0m
+        labels: {severity: critical}
+        annotations:
+          summary: "More than 5 {{ $labels.job }} jobs failed for good on {{ $labels.queue }} in 15 minutes."
+          runbook: "docs/observability.md#aghighqueuejobsfailing"
+
+  - name: aghigh-redis
+    rules:
+      - alert: AghighRedisMemoryHigh
+        expr: (redis_memory_used_bytes / redis_memory_max_bytes) > 0.8
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "Redis {{ $labels.job }} uses more than 80% of maxmemory."
+          runbook: "docs/observability.md#aghighredismemoryhigh"
+      - alert: AghighRedisQueueNearMaxmemory
+        expr: (redis_memory_used_bytes{job="redis-queue"} / redis_memory_max_bytes{job="redis-queue"}) > 0.95
+        for: 1m
+        labels: {severity: critical}
+        annotations:
+          summary: "redis-queue is above 95% of maxmemory: noeviction means WRITE ERRORS for queues, state and metrics at 100%."
+          runbook: "docs/observability.md#aghighredisqueuenearmaxmemory"
+      - alert: AghighStateStoreErrors
+        expr: sum by (component) (increase(aghigh_state_store_errors_total[10m])) > 0
+        for: 0m
+        labels: {severity: warning}
+        annotations:
+          summary: "Component {{ $labels.component }} caught Redis state-store errors in the last 10 minutes."
+          runbook: "docs/observability.md#aghighstatestoreerrors"
+
+  - name: aghigh-postgres
+    rules:
+      - alert: AghighPgBouncerPoolSaturated
+        expr: (sum(pgbouncer_pools_server_active_connections) / sum(pgbouncer_databases_pool_size)) > 0.9
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "PgBouncer server pool above 90% busy for 5 minutes (docs/queues.md connection budget)."
+          runbook: "docs/observability.md#aghighpgbouncerpoolsaturated"
+      - alert: AghighPgBouncerClientsWaiting
+        expr: sum(pgbouncer_pools_client_waiting_connections) > 0
+        for: 2m
+        labels: {severity: warning}
+        annotations:
+          summary: "Clients are queueing for a PgBouncer server connection for 2 minutes."
+          runbook: "docs/observability.md#aghighpgbouncerclientswaiting"
+      - alert: AghighPostgresConnectionsSaturated
+        expr: (sum(pg_stat_database_numbackends) / max(pg_settings_max_connections)) > 0.8
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "Postgres backends above 80% of max_connections (pool + migrator + exporters + GlitchTip)."
+          runbook: "docs/observability.md#aghighpostgresconnectionssaturated"
+
+  - name: aghigh-host
+    rules:
+      - alert: AghighDiskUsageHigh
+        expr: (1 - node_filesystem_avail_bytes{mountpoint="/",fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes{mountpoint="/",fstype!~"tmpfs|overlay"}) > 0.85
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "Root filesystem (of the Docker VM on Docker Desktop) above 85% used."
+          runbook: "docs/observability.md#aghighdiskusagehigh"
+      - alert: AghighTargetDown
+        expr: up == 0
+        for: 3m
+        labels: {severity: warning}
+        annotations:
+          summary: "Scrape target {{ $labels.job }} ({{ $labels.instance }}) is down."
+          runbook: "docs/observability.md#aghightargetdown"
+
+  - name: aghigh-websocket
+    rules:
+      - alert: AghighReverbScrapeDown
+        expr: reverb_scrape_up == 0
+        for: 2m
+        labels: {severity: warning}
+        annotations:
+          summary: "The app could not read Reverb's Pusher API connection count for 2 minutes (Reverb slow or down)."
+          runbook: "docs/observability.md#aghighreverbscrapedown"

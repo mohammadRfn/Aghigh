@@ -122,6 +122,34 @@ JSON on stdout, channels `app`, `security`, `audit`, `slow_query`. Sensitive key
 - Chat Redis state only through `Modules\Chat\State\ChatState` (`state` connection, `chat:` prefix; Feature tests use
   `CHAT_STATE_DRIVER=memory`). Invariants: `php artisan chat:verify-invariants --rebuild`. ADR 0009.
 
+## Observability and metrics (Task 9)
+- Record metrics ONLY through `Modules\Shared\Contracts\Metrics` (`counter`, `gauge`, `histogram`). Every metric is
+  declared once in `Modules\Shared\Metrics\Catalog` (type, HELP, label names, buckets) and named by a constant in
+  `Modules\Shared\Metrics\Names`. Only `Modules\Shared` may import `Prometheus\`, `Sentry\` or `Pusher\`
+  (tests/Arch/ModulesTest.php). Order and chat listeners live in the OWNING module (`Modules/Ordering/app/Listeners`,
+  `Modules/Chat/app/Listeners`) and use only the contract.
+- Cardinality rules (ADR 0010): label values come from a BOUNDED set: route name or URI template, method, status
+  class (`2xx`..`5xx`), queue, job class (short name), limiter name, outcome, role. Never ids, emails, IPs, raw URLs,
+  request ids. Unmatched routes are `route="unmatched"`. A new label needs a Catalog change and a reason in the ADR.
+- Drivers (`METRICS_DRIVER`): `redis` (default; promphp Redis storage on the DEDICATED `metrics` Redis connection =
+  redis-queue db `REDIS_METRICS_DB` 3, never `state`), `memory` (tests; also strict: unknown metric/label throws),
+  `null` (also selected by `METRICS_ENABLED=false`). Writes never throw and never block: failures are counted in
+  `Metrics\Failures` and logged once a minute. Never keep metric state in PHP memory (2 Octane workers, max-requests 500).
+- HTTP metrics are recorded in `RecordHttpMetrics::terminate()`; queue wait/runtime from the worker events; queue
+  depth, oldest age (exact) and Horizon wait (estimate) are computed at scrape time from `QueueMetrics::snapshot()`
+  (cached 5 s). `null` from a source = omit the sample, never 0.
+- How to add a metric: constant in `Names` -> definition in `Catalog` -> call through the contract in the owning
+  module -> panel in `docker/observability/grafana/dashboards/*.json` -> (if alert) rule + promtool test ->
+  `make obs-rules-test obs-verify`. Then document it in docs/observability.md.
+- `/internal/metrics`: bearer `METRICS_TOKEN` (empty = 404), no limiter/session, denied at Traefik
+  (`internal-deny` router). Env: `METRICS_ENABLED`, `METRICS_DRIVER`, `METRICS_TOKEN`, `REDIS_METRICS_DB`,
+  `METRICS_QUEUE_CACHE_SECONDS`, `METRICS_REVERB_CACHE_SECONDS`, `METRICS_REVERB_TIMEOUT_SECONDS`, `SENTRY_LARAVEL_DSN`,
+  `SENTRY_TRACES_SAMPLE_RATE`, `GIT_SHA`. `make test` and CI pass `METRICS_DRIVER=memory`; `make test-int` uses the
+  real metrics db 13. `php artisan metrics:reset` (refused in production) wipes the metrics db.
+- Errors: `SentryScrubber::beforeSend` (5xx + job failures only, scrubbed with `Logging\SensitiveKeys`, the same list
+  as `RedactSensitiveData`). Never put a closure in config/sentry.php. Stack: `make obs-up`, `make obs-verify`,
+  `make obs-down` before any latency baseline (docs/observability.md).
+
 ## Workflow
 One branch per task (`feat/<task>`), conventional commits. Before finishing: `make lint stan test test-int` green.
 Write the docs a task asks for in `docs/`. Mark anything unmeasured as `TODO(measure)`.

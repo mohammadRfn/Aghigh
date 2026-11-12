@@ -1,0 +1,61 @@
+# promtool test rules (make obs-rules-test). Deterministic annotations only (no $value) so exp_annotations match.
+rule_files:
+  - aghigh.rules.yml
+
+evaluation_interval: 15s
+
+tests:
+  - interval: 15s
+    input_series:
+      - series: 'reverb_scrape_up{job="app",instance="app:8000"}'
+        values: "0x20"
+      - series: 'aghigh_metrics_backend_up{job="app",instance="app:8000"}'
+        values: "1x20"
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: AghighReverbScrapeDown
+        exp_alerts:
+          - exp_labels: {severity: warning, job: app, instance: "app:8000"}
+            exp_annotations:
+              summary: "The app could not read Reverb's Pusher API connection count for 2 minutes (Reverb slow or down)."
+              runbook: "docs/observability.md#aghighreverbscrapedown"
+      - eval_time: 5m
+        alertname: AghighMetricsBackendDown
+        exp_alerts: []
+
+  - interval: 15s
+    input_series:
+      - series: 'redis_memory_used_bytes{job="redis-queue",instance="redis-exporter-queue:9121"}'
+        values: "300000000x20"
+      - series: 'redis_memory_max_bytes{job="redis-queue",instance="redis-exporter-queue:9121"}'
+        values: "314572800x20"
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: AghighRedisQueueNearMaxmemory
+        exp_alerts:
+          - exp_labels: {severity: critical, job: redis-queue, instance: "redis-exporter-queue:9121"}
+            exp_annotations:
+              summary: "redis-queue is above 95% of maxmemory: noeviction means WRITE ERRORS for queues, state and metrics at 100%."
+              runbook: "docs/observability.md#aghighredisqueuenearmaxmemory"
+      - eval_time: 6m
+        alertname: AghighRedisMemoryHigh
+        exp_alerts:
+          - exp_labels: {severity: warning, job: redis-queue, instance: "redis-exporter-queue:9121"}
+            exp_annotations:
+              summary: "Redis redis-queue uses more than 80% of maxmemory."
+              runbook: "docs/observability.md#aghighredismemoryhigh"
+
+  - interval: 15s
+    input_series:
+      - series: 'aghigh_http_requests_total{status_class="5xx",route="orders.store",method="POST",job="app",instance="app:8000"}'
+        values: "0+10x40"
+      - series: 'aghigh_http_requests_total{status_class="2xx",route="orders.store",method="POST",job="app",instance="app:8000"}'
+        values: "0+10x40"
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: AghighHttp5xxRateHigh
+        exp_alerts:
+          - exp_labels: {severity: critical}
+            exp_annotations:
+              summary: "More than 2% of HTTP requests answered 5xx over 5 minutes (provisional threshold)."
+              runbook: "docs/observability.md#aghighhttp5xxratehigh"

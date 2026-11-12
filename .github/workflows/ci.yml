@@ -57,6 +57,8 @@ jobs:
           BROADCAST_CONNECTION: "null"
           RATE_LIMIT_MULTIPLIER: "1000"
           LOG_CHANNEL: "null"
+          METRICS_DRIVER: memory
+          METRICS_TOKEN: ""
         run: php artisan test --testsuite=Unit,Feature,Arch
 
   integration:
@@ -93,6 +95,9 @@ jobs:
       QUEUE_CONNECTION: redis
       CHAT_STATE_DRIVER: redis
       LOG_CHANNEL: 'null'
+      METRICS_ENABLED: 'true'
+      METRICS_DRIVER: redis
+      REDIS_METRICS_DB: '13'
     steps:
       - uses: actions/checkout@v4
 

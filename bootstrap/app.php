@@ -9,9 +9,11 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Modules\Catalog\Http\Middleware\AdminHeaders;
 use Modules\Identity\Http\Middleware\RequireOrigin;
+use Modules\Shared\ErrorReporting\ErrorReporting;
 use Modules\Shared\Exceptions\ProblemDetails;
 use Modules\Shared\Http\Middleware\AssignRequestId;
 use Modules\Shared\Http\Middleware\NoStore;
+use Modules\Shared\Http\Middleware\RecordHttpMetrics;
 use Modules\Shared\Http\Middleware\SecurityHeaders;
 
 /*
@@ -45,6 +47,8 @@ return Application::configure(basePath: dirname(__DIR__))
         // Global, so even unmatched routes (404) get a request id and the headers.
         $middleware->prepend(AssignRequestId::class);
         $middleware->append(SecurityHeaders::class);
+        // Task 9: counter + latency histogram recorded in terminate() (after the response is sent); never throws.
+        $middleware->append(RecordHttpMetrics::class);
 
         // CSRF defense for cookie endpoints must run before authentication (else 401 hides 403).
         $middleware->prependToPriorityList(AuthenticatesRequests::class, RequireOrigin::class);
@@ -59,6 +63,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectGuestsTo(null);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // Task 9: report 5xx and job failures to GlitchTip (SentryScrubber filters 4xx and scrubs). Report only,
+        // so ProblemDetails::render below stays the single renderer.
+        ErrorReporting::register($exceptions);
+
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );

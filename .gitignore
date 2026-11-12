@@ -29,3 +29,6 @@ Thumbs.db
 .env.docker
 public/frankenphp-worker.php
 /storage/jwt/
+# Task 9: Prometheus bearer token written by make obs-keys
+docker/observability/secrets/*
+!docker/observability/secrets/.gitignore

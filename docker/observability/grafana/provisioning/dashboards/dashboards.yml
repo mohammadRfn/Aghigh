@@ -1,0 +1,13 @@
+# Task 9: dashboards are JSON in the repo (docker/observability/grafana/dashboards); the UI cannot save over them.
+apiVersion: 1
+providers:
+  - name: aghigh
+    orgId: 1
+    folder: Aghigh
+    type: file
+    disableDeletion: true
+    allowUiUpdates: false
+    updateIntervalSeconds: 30
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false

@@ -50,3 +50,28 @@ arch('Chat does not use Identity models, enums, services or the guard')
 arch('Chat does not use limiter engines or Shared Lua directly')
     ->expect('Modules\\Chat')
     ->not->toUse(['Modules\\Shared\\RateLimiting\\LuaScripts', 'Modules\\Shared\\RateLimiting\\RedisConcurrencyLimiter', 'Modules\\Shared\\RateLimiting\\RedisSlidingWindowLimiter']);
+
+// Task 9: only the Shared kernel talks to the metrics / error-reporting / Pusher vendor libraries; feature modules
+// record metrics through Modules\Shared\Contracts\Metrics and never touch a driver or a collector.
+$vendorLibraries = ['Prometheus', 'Sentry', 'Pusher'];
+$metricsInternals = [
+    'Modules\\Shared\\Metrics\\PrometheusMetrics',
+    'Modules\\Shared\\Metrics\\NullMetrics',
+    'Modules\\Shared\\Metrics\\Collectors',
+    'Modules\\Shared\\Metrics\\ScrapeCache',
+    'Modules\\Shared\\Metrics\\Failures',
+];
+
+arch('App does not use the metrics or error-reporting vendor libraries directly')
+    ->expect('App')
+    ->not->toUse($vendorLibraries);
+
+foreach ($featureModules as $module) {
+    arch("{$module} does not use the metrics or error-reporting vendor libraries directly")
+        ->expect("Modules\\{$module}")
+        ->not->toUse($vendorLibraries);
+
+    arch("{$module} records metrics only through the Shared Metrics contract")
+        ->expect("Modules\\{$module}")
+        ->not->toUse($metricsInternals);
+}

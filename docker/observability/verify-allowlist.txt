@@ -1,0 +1,19 @@
+# make obs-verify: PromQL queries (from dashboards and rules) that MAY be empty after the smoke traffic, one regex
+# per line with a reason after " | ". Anything else that is empty fails the run. Never "fix" a panel by adding it here
+# without a reason that names the missing traffic or the host limitation.
+aghigh_queue_jobs_failed_total | no job fails during the smoke run (k6 smoke + verify-chat)
+aghigh_metrics_write_failures_total | no metric write fails while Redis is healthy
+aghigh_state_store_errors_total | no Redis state-store failure during the smoke run
+aghigh_rate_limit_hits_total | the smoke run stays under every limiter
+aghigh_orders_total\{outcome="(cancelled|expired|fulfilled)"\} | the smoke run only reserves/pays/confirms
+aghigh_queue_estimated_wait_seconds | Horizon has no metrics snapshot yet (horizon:snapshot runs every 5 minutes)
+aghigh_queue_oldest_pending_age_seconds | queues are empty between smoke runs (sample omitted when empty)
+reverb_pusher_api_connections | reverb_scrape_up is 0 when Reverb is slow/unreachable; check reverb_scrape_up first
+container_network_tcp_usage_total | cAdvisor TCP metrics may be missing on Docker Desktop/WSL2 (record it in docs)
+container_(cpu|memory|fs)_.*compose_service | cAdvisor per-container series may be partial on Docker Desktop/WSL2 (record it)
+node_filesystem_(avail|size)_bytes | node_exporter root filesystem of the Docker VM may be absent on Docker Desktop
+pg_locks_count | no lock is held at scrape time
+pgbouncer_pools_client_waiting_connections | nobody waits for a server connection under smoke load
+redis_evicted_keys_total | the cache Redis has not evicted anything yet
+rate\(aghigh_http_requests_total\{status_class="5xx"\} | no 5xx during the smoke run
+aghigh_http_requests_total\{route=~".\*webhook | the traffic burst sends no signed payment webhook

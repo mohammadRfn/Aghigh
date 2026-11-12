@@ -1,0 +1,75 @@
+# Task 9. Scrape interval 15 s; retention by time AND size is set on the command line (compose.yaml, provisional).
+# Every target is a compose service name: Prometheus joins `backend` (exporters, app) and `edge` (traefik:8082).
+global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+  evaluation_interval: 15s
+  external_labels:
+    stack: aghigh-dev
+
+rule_files:
+  - /etc/prometheus/rules/aghigh.rules.yml
+
+# No Alertmanager in dev: alerts are evaluated and visible here and in Grafana only (Task 11 decides notification).
+
+scrape_configs:
+  - job_name: app
+    metrics_path: /internal/metrics
+    scheme: http
+    # Bearer token = METRICS_TOKEN, written by `make obs-keys` (git-ignored). The scrape goes to app:8000 on the
+    # backend network; through Traefik the same path is denied (make obs-verify proves both).
+    authorization:
+      type: Bearer
+      credentials_file: /etc/prometheus/secrets/metrics_token
+    static_configs:
+      - targets: ["app:8000"]
+
+  - job_name: traefik
+    static_configs:
+      - targets: ["traefik:8082"]
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: node
+    static_configs:
+      - targets: ["node-exporter:9100"]
+
+  - job_name: cadvisor
+    scrape_timeout: 10s
+    static_configs:
+      - targets: ["cadvisor:8080"]
+    metric_relabel_configs:
+      # keep only compose-managed containers; drop the noisy per-cgroup root series
+      - source_labels: [__name__, container_label_com_docker_compose_project]
+        regex: "container_.*;"
+        action: drop
+
+  - job_name: postgres
+    static_configs:
+      - targets: ["postgres-exporter:9187"]
+
+  - job_name: pgbouncer
+    static_configs:
+      - targets: ["pgbouncer-exporter:9127"]
+
+  - job_name: redis-queue
+    static_configs:
+      - targets: ["redis-exporter-queue:9121"]
+
+  - job_name: redis-cache
+    static_configs:
+      - targets: ["redis-exporter-cache:9121"]
+
+  - job_name: loki
+    static_configs:
+      - targets: ["loki:3100"]
+
+  - job_name: alloy
+    static_configs:
+      - targets: ["alloy:12345"]
+
+  - job_name: grafana
+    static_configs:
+      - targets: ["grafana:3000"]
