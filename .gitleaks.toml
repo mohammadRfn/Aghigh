@@ -1,0 +1,8 @@
+title = "Aghigh gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Fake values used to prove the Sentry scrubber removes them"
+paths = ['''Modules/Shared/tests/Feature/SentryScrubTest\.php''']

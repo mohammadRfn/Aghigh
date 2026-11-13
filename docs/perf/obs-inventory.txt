@@ -1,4 +1,4 @@
-# make obs-verify inventory: Tue Nov 10 11:37:03 UTC 2026 Linux MohammadRaufian 6.18.58.1-microsoft-standard-WSL2 #1 SMP PREEMPT_DYNAMIC Tue Oct 27 00:24:11 UTC 2026 x86_64 GNU/Linux d240b8b
+# make obs-verify inventory: Wed Nov 11 13:01:17 UTC 2026 Linux MohammadRaufian 6.18.58.1-microsoft-standard-WSL2 #1 SMP PREEMPT_DYNAMIC Tue Oct 27 00:24:11 UTC 2026 x86_64 GNU/Linux 6b358d2
 ## scrape targets
       1 "health":"up"	"job":"app"}
       1 "health":"up"	"job":"grafana"}
@@ -19,16 +19,16 @@
       1 "job":"redis-queue"}	"job":"redis-queue"}
       1 "job":"traefik"}	"health":"up"
 ## series per job
-app: 591 series
-traefik: 286 series
-node: 1396 series
-cadvisor: 68 series
-postgres: 1478 series
-pgbouncer: 129 series
-redis-queue: 1245 series
-redis-cache: 497 series
-loki: 1463 series
-alloy: 272 series
+app: 695 series
+traefik: 376 series
+node: 1427 series
+cadvisor: 76 series
+postgres: 1498 series
+pgbouncer: 133 series
+redis-queue: 1422 series
+redis-cache: 537 series
+loki: 2480 series
+alloy: 298 series
 grafana: 2659 series
 prometheus: 1241 series
 ## cadvisor metric names present
@@ -53,6 +53,7 @@ prometheus: 1241 series
   "mountpoint":"/mnt/wsl/docker-desktop-bind-mounts/Ubuntu-26.04/10bf2897b33acd74002e5ed9fcf668e393fcabd332a94cc32b6c329df1da155a/user/0"
   "mountpoint":"/mnt/wsl/docker-desktop-bind-mounts/Ubuntu-26.04/10bf2897b33acd74002e5ed9fcf668e393fcabd332a94cc32b6c329df1da155a/user/1000"
   "mountpoint":"/mnt/wsl/docker-desktop-bind-mounts/Ubuntu-26.04/16f7fd513b8efa1a7f653b38ac8c52d61348deb50a8db8f889cb7086c1094c71"
+  "mountpoint":"/mnt/wsl/docker-desktop-bind-mounts/Ubuntu-26.04/1ded6fb5578254c2a58006b765dac0163134ce9b429b01984090a02f133189f3"
   "mountpoint":"/mnt/wsl/docker-desktop-bind-mounts/Ubuntu-26.04/1e105006729bea0462f1db810889af84d84f48efbe1c28c4fe1b3c782abb9d84"
   "mountpoint":"/mnt/wsl/docker-desktop-bind-mounts/Ubuntu-26.04/37631ebdfe711a1c7eff67d3da204be739f73d29fe37a1fb6b84987d20a4d64c"
   "mountpoint":"/mnt/wsl/docker-desktop-bind-mounts/Ubuntu-26.04/4269d3f4b4123996981f354f79562d38561854d39c1195406d58bc4b98be6b17"
@@ -88,7 +89,7 @@ prometheus: 1241 series
   "mountpoint":"/usr/src/linux-headers-6.18.58.1-microsoft-standard-WSL2"
   "mountpoint":"/var/lib/docker"
 ## one Traefik access-log line (check the request-id field name)
-{"ClientAddr":"172.30.0.11:50318","ClientHost":"172.30.0.11","ClientPort":"50318","ClientUsername":"-","DownstreamContentSize":35,"DownstreamStatus":200,"Duration":3955756,"OriginContentSize":35,"OriginDuration":3870349,"OriginStatus":200,"Overhead":85407,"RequestAddr":"traefik","RequestContentSize":0,"RequestCount":632,"RequestHost":"traefik","RequestMethod":"GET","RequestPath":"/api/v1/ordering/ping","RequestPort":"-","RequestProtocol":"HTTP/1.1","RequestScheme":"http","RetryAttempts":0,"RouterName":"app@file","ServiceAddr":"app:8000","ServiceName":"app@file","ServiceURL":"http://app:8000","StartLocal":"2026-11-10T11:35:43.857553163Z","StartUTC":"2026-11-10T11:35:43.857553163Z","downstream_X-Request-Id":"01a1c53e-19f3-7165-b2bf-318230064a95","entryPointName":"web","level":"info","msg":"","origin_X-Request-Id":"01a1c53e-19f3-7165-b2bf-318230064a95","time":"2026-11-10T11:35:43Z"}
+{"ClientAddr":"172.30.0.11:39312","ClientHost":"172.30.0.11","ClientPort":"39312","ClientUsername":"-","DownstreamContentSize":35,"DownstreamStatus":200,"Duration":6905008,"OriginContentSize":35,"OriginDuration":6842603,"OriginStatus":200,"Overhead":62405,"RequestAddr":"traefik","RequestContentSize":0,"RequestCount":585,"RequestHost":"traefik","RequestMethod":"GET","RequestPath":"/api/v1/ordering/ping","RequestPort":"-","RequestProtocol":"HTTP/1.1","RequestScheme":"http","RetryAttempts":0,"RouterName":"app@file","ServiceAddr":"app:8000","ServiceName":"app@file","ServiceURL":"http://app:8000","StartLocal":"2026-11-11T12:59:48.420488862Z","StartUTC":"2026-11-11T12:59:48.420488862Z","downstream_X-Request-Id":"01a1cab1-6f4a-7028-869d-78e90fe2b2f5","entryPointName":"web","level":"info","msg":"","origin_X-Request-Id":"01a1cab1-6f4a-7028-869d-78e90fe2b2f5","time":"2026-11-11T12:59:48Z"}
   (none yet)
 ## one app JSON log line (check where request_id lives: extra vs context)
   (none yet)
