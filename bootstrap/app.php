@@ -9,6 +9,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Modules\Catalog\Http\Middleware\AdminHeaders;
 use Modules\Identity\Http\Middleware\RequireOrigin;
+use Modules\Shared\Contracts\ProblemException;
 use Modules\Shared\ErrorReporting\ErrorReporting;
 use Modules\Shared\Exceptions\ProblemDetails;
 use Modules\Shared\Http\Middleware\AssignRequestId;
@@ -68,6 +69,13 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectGuestsTo(null);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // A 4xx problem (401, 409, 429, ...) is a correct answer to the client, not a fault: reporting it wrote an
+        // ERROR line per request (a 429 flood drowned real errors). 429s keep their own `security` log line
+        // (rate_limit_hit). 5xx problems (e.g. LimiterUnavailable 503) and every other exception are still reported.
+        $exceptions->dontReportWhen(
+            fn (Throwable $e): bool => $e instanceof ProblemException && $e->problemStatus() < 500,
+        );
+
         // Task 9: report 5xx and job failures to GlitchTip (SentryScrubber filters 4xx and scrubs). Report only,
         // so ProblemDetails::render below stays the single renderer.
         ErrorReporting::register($exceptions);
