@@ -11,3 +11,7 @@ storage/framework/sessions/*
 storage/framework/views/*
 bootstrap/cache/*
 loadtests/results
+# Task 10 (explicit, although .env.* and loadtests/results above already cover them)
+.env.loadtest
+.env.loadtest.variant
+loadtests/results/*

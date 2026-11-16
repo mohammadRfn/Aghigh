@@ -32,3 +32,9 @@ public/frankenphp-worker.php
 # Task 9: Prometheus bearer token written by make obs-keys
 docker/observability/secrets/*
 !docker/observability/secrets/.gitignore
+# Task 10: loadtest env files (read only by compose.loadtest.yaml) and results
+.env.loadtest
+.env.loadtest.variant
+loadtests/results/*
+!loadtests/results/.gitkeep
+!loadtests/results/SCHEMA.md

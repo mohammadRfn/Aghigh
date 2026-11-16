@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Modules\Identity\Auth\JwtGuard;
 use Modules\Identity\Console\JwtKeys;
+use Modules\Identity\Console\LoadtestSeedUsers;
 use Modules\Identity\Console\PruneTokens;
 use Modules\Identity\Contracts\CurrentUser;
 use Modules\Identity\Contracts\UserDirectory;
@@ -26,7 +27,7 @@ final class IdentityServiceProvider extends ModuleServiceProvider
 
     protected array $providers = [EventServiceProvider::class, RouteServiceProvider::class];
 
-    protected array $commands = [JwtKeys::class, PruneTokens::class];
+    protected array $commands = [JwtKeys::class, PruneTokens::class, LoadtestSeedUsers::class];
 
     public function register(): void
     {

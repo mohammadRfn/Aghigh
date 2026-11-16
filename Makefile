@@ -7,7 +7,7 @@ DC := docker compose --env-file .env.docker
 .PHONY: help init build up down ps logs shell install migrate test lint stan
 
 help: ## Show this help
-> @grep -hE '^[a-zA-Z_-]+:.*?## ' Makefile | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-9s %s\n", $$1, $$2}'
+> @grep -hE '^[a-zA-Z0-9_-]+:.*?## ' Makefile | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-22s %s\n", $$1, $$2}'
 
 init: ## Create .env.docker from the example (once)
 > @test -f .env.docker || (cp .env.docker.example .env.docker && echo "created .env.docker - review the passwords")
@@ -124,3 +124,63 @@ obs-verify: ## Prove the stack: Grafana provisioning, /internal denied at the ed
 
 metrics-reset: ## Wipe the metrics Redis db (refused in production); Task 10's loadtest-reset calls this
 > $(DC) exec -T app php artisan metrics:reset
+
+# ---- Task 10: load tests (loadtests/README.md). compose.loadtest.yaml is used ONLY by these targets. ----
+.PHONY: loadtest-init loadtest-up loadtest-config loadtest-reset loadtest-host-info k6-image-check k6-image-fallback
+.PHONY: k6-catalog k6-order-flood k6-spike k6-soak k6-websocket-chat k6-auth-abuse k6-metrics-overhead k6-repeat k6-summarize
+LT := $(DC) -f compose.yaml -f compose.loadtest.yaml
+LT_RUN := REVERB_SCALE=$(REVERB_SCALE) ./loadtests/scripts/run-scenario.sh
+SEED_USERS ?= 500
+VARIANT ?= all
+STRATEGY ?= all
+MODE ?= fanout
+METRICS ?= all
+
+loadtest-init: init ## Create .env.loadtest from the example (once) and the results directory
+> @test -f .env.loadtest || (cp .env.loadtest.example .env.loadtest && echo "created .env.loadtest - review it")
+> @mkdir -p loadtests/results
+
+loadtest-up: loadtest-init ## Start the stack WITH the loadtest overlay (APP_ENV=loadtest). `make up` switches back to local
+> $(LT) up -d --scale reverb=$(REVERB_SCALE)
+
+loadtest-config: ## Print the environment compose resolves for the app under the overlay (checks the env_file layering)
+> @$(LT) config --format json | jq '.services.app.environment | {APP_ENV, APP_DEBUG, LOG_LEVEL, RATE_LIMIT_MULTIPLIER, STOCK_STRATEGY, STOCK_NAIVE_DELAY_MS, METRICS_ENABLED, SENTRY_TRACES_SAMPLE_RATE}'
+
+loadtest-reset: ## Known state before EVERY run: fresh-seed, users (SEED_USERS=500), catalog (N=100000), stock, flush state+cache dbs, empty queues, metrics-reset
+> @N=$(N) USERS_SEED=$(SEED_USERS) ./loadtests/scripts/loadtest-reset.sh
+
+loadtest-host-info: ## Print the hardware / version block that every result file records
+> @./loadtests/scripts/host-info.sh
+
+k6-image-check: ## Show which k6 image compose uses, whether it is pinned and present, and its k6 version
+> @./loadtests/scripts/k6-image.sh check
+
+k6-image-fallback: ## Offline fallback: import the official k6 release binary (published sha256 checked) as a local image
+> @./loadtests/scripts/k6-image.sh fallback
+
+k6-catalog: ## Catalog naive vs optimized cold/warm, back to back (VARIANT=naive|optimized-cold|optimized-warm|all RATE= DURATION=)
+> @for v in $(if $(filter all,$(VARIANT)),naive optimized-cold optimized-warm,$(VARIANT)); do $(LT_RUN) catalog $$v || exit 1; done
+
+k6-order-flood: ## Race on one low-stock product (STRATEGY=naive|atomic|locking|all STOCK=50 USERS=150). all = atomic, locking, then naive
+> @i=0; for s in $(if $(filter all,$(STRATEGY)),atomic locking naive,$(STRATEGY)); do PRODUCT_RANK=$$(( $(or $(PRODUCT_RANK),0) + i )) USER_OFFSET=$$(( $(or $(USER_OFFSET),0) + i * $(or $(USERS),150) )) $(LT_RUN) order-flood $$s || exit 1; i=$$((i + 1)); done
+
+k6-spike: ## Sudden 10x jump then recovery; records queue drain time and failed jobs (RATE=8 SPIKE_FACTOR=10)
+> @$(LT_RUN) spike default
+
+k6-soak: ## Long moderate load with resource sampling and leak slopes (DURATION=30m; long run: DURATION=2h)
+> @$(LT_RUN) soak default
+
+k6-websocket-chat: ## WebSocket chat (MODE=ceiling|fanout|reconnect-jitter|reconnect-immediate|reconnect REVERB_SCALE=1|2). reconnect = jitter then immediate
+> @for m in $(if $(filter reconnect,$(MODE)),reconnect-jitter reconnect-immediate,$(MODE)); do $(LT_RUN) websocket-chat $$m || exit 1; done
+
+k6-auth-abuse: ## Credential stuffing with RATE_LIMIT_MULTIPLIER unset: 429 at the configured limit, XFF ignored, lockout, cross-IP login
+> @$(LT_RUN) auth-abuse default
+
+k6-metrics-overhead: ## Same load with metrics off/on and tracing on (METRICS=metrics-off|metrics-on|traces-on|obs-up|all)
+> @for v in $(if $(filter all,$(METRICS)),metrics-off metrics-on traces-on,$(METRICS)); do $(LT_RUN) metrics-overhead $$v || exit 1; done
+
+k6-repeat: ## Hygiene: reset + run + cooldown, RUNS times, then median/min/max (TARGET=k6-catalog RUNS=3 COOLDOWN=60 ARGS="STRATEGY=atomic")
+> @RUNS=$(or $(RUNS),3) COOLDOWN=$(or $(COOLDOWN),60) RESET=$(or $(RESET),1) ARGS="$(ARGS)" ./loadtests/scripts/repeat.sh $(TARGET)
+
+k6-summarize: ## median/min/max over result files (FILES="loadtests/results/catalog-naive-*.json")
+> @./loadtests/scripts/summarize.sh $(FILES)

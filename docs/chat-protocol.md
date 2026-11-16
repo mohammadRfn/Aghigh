@@ -197,3 +197,21 @@ With two replicas, one run delivered to 5 sockets in 499 ms (2026-11-09).
   `loadtests/chat-smoke.js` is the starting point.
 - **Task 11 (TLS)**: clients switch to `wss` (`VITE_REVERB_SCHEME=https`, port 443) while the app keeps publishing over
   http to `reverb:8080`; `/apps/` stays unrouted; tune Reverb `stop_grace_period` (15 s now) with the deploy strategy.
+
+## Task 10: measuring the per-replica ceiling, delivery latency and reconnect storms
+
+Status: **not measured yet** (`TODO(measure)`). Scenario: `loadtests/scenarios/websocket-chat.js`.
+
+| What | Value | Command | Where to read it |
+|---|---|---|---|
+| Approximate connection ceiling, one replica | `TODO(measure)` | `make k6-websocket-chat MODE=ceiling REVERB_SCALE=1 VUS=40 CONNS_PER_VU=500` | `metrics.derived.ceiling_approx_connections`, `invariants.resources.reverb.<container>.{established_sockets,open_fds}.peak` |
+| Same with two replicas (observed split, not assumed even) | `TODO(measure)` | `make k6-websocket-chat MODE=ceiling REVERB_SCALE=2 VUS=40 CONNS_PER_VU=500` | same keys, one entry per replica |
+| Delivery latency p95, one replica | `TODO(measure)` | `make k6-websocket-chat MODE=fanout REVERB_SCALE=1` | `metrics.derived.delivery_p95_ms` |
+| Delivery latency p95 across replicas (Redis pub/sub hop) | `TODO(measure)` | `make k6-websocket-chat MODE=fanout REVERB_SCALE=2` | `metrics.derived.delivery_p95_ms` |
+| Reconnect storm: back-off with jitter vs immediate | `TODO(measure)` | `make k6-websocket-chat MODE=reconnect` | `metrics.derived.peak_attempts_per_second`, `recover_p95_ms`, `reconnect_failed_attempts` of both variants |
+
+The ceiling is **approximate**: it is the ramp position of the first failed handshake, seen from one k6 process whose
+VUs do not share state, through Traefik, with the fd limits of k6, Traefik and Reverb all in play (`K6_NOFILE`,
+`TRAEFIK_NOFILE`, `REVERB_NOFILE`). If no handshake fails the result says so and the ceiling was not reached: raise
+`VUS` or `CONNS_PER_VU`. The jitter policy in the script is the algorithm of "Client reconnect algorithm" above
+(`random(0, min(30 s, 1 s * 2^attempt))`). After every chat run `chat:verify-invariants --rebuild` must pass.

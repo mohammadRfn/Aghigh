@@ -92,3 +92,21 @@ HTTP public max-age=30 plus stale-while-revalidate=60 permits up to 90 seconds o
 `make test-int` uses aghigh_test, direct migrator Postgres and isolated Redis DBs. Stampede workers are separate PHP processes with a ready/go barrier, invoking the real HTTP kernel. An actual products SELECT increments a state-store counter; the test requires exactly one cold computation. It does not prove behavior past the configured lock lease.
 
 The plan test seeds 60,000 products, ANALYZEs and inspects EXPLAIN FORMAT JSON for category, both price orders, category+price and selective Persian search. Naive shapes must show Seq Scan. No enable_seqscan=off, fabricated output, retries to hide failure or automatic skips are used. Planner expectations are **unexecuted and potentially environment-sensitive**, not known flaky. If repeated target runs prove a flaky expectation, preserve failing raw plans, label it and justify any quarantine with a linked issue; do not silently remove it.
+
+## Task 10: filling the tables above
+
+Status: **still `TODO(measure)`**. The catalog load test produces the latency side of the tables; the plans come from
+`make explain-catalog` as before.
+
+```
+make loadtest-up
+make loadtest-reset N=100000                      # the catalog size is recorded in run.params.catalog_products
+make obs-down
+make k6-repeat TARGET=k6-catalog RUNS=3 RESET=0   # naive -> optimized-cold -> optimized-warm, three times
+```
+
+Read `p50`, `p95`, `p99`, `rps` per variant from `loadtests/results/summary-k6-catalog-*.json` (median, min, max of
+the three runs). Both endpoints get the same query set and page depth (`run.params.query_count`, `page_depth`), so
+the comparison is naive vs optimized on identical requests. Only this relative comparison is meaningful: absolute
+numbers belong to the machine in `host`. For the 1,000,000-product row repeat with `N=1000000`.
+Copy the curated result files to `docs/benchmarks/` before writing any number into this file.

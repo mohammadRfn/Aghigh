@@ -1,0 +1,31 @@
+# Task 10: LOADTEST OVERLAY. Never used on its own and never by `make up`:
+#   docker compose --env-file .env.docker -f compose.yaml -f compose.loadtest.yaml ...   (the `LT` variable in the Makefile)
+#
+# Why a separate file: the loadtest switches (APP_ENV=loadtest enables /_bench and /_debug, the naive stock strategy,
+# the rate-limit multiplier) must be impossible to reach from compose.yaml or compose.prod.yml. A stray .env.loadtest
+# on a server changes nothing, because only THIS file reads it.
+#
+# Layering for the app containers (later wins; compose `environment:` in compose.yaml still wins over all of them):
+#   .env  <  .env.docker  <  .env.loadtest  <  .env.loadtest.variant
+#   .env.loadtest          your loadtest settings (copy .env.loadtest.example; git-ignored; optional)
+#   .env.loadtest.variant  written by loadtests/scripts/run-scenario.sh for ONE run (STOCK_STRATEGY=naive, ...)
+# The two base files are repeated so the order is the same whether Compose appends or replaces `env_file` on merge.
+# The optional-file form below needs Docker Compose >= 2.24. Check the result with: make loadtest-config
+x-loadtest-env: &loadtest-env
+  env_file:
+    - .env
+    - .env.docker
+    - path: .env.loadtest
+      required: false
+    - path: .env.loadtest.variant
+      required: false
+
+services:
+  app:
+    <<: *loadtest-env
+  horizon:
+    <<: *loadtest-env
+  reverb:
+    <<: *loadtest-env
+  scheduler:
+    <<: *loadtest-env

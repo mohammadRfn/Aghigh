@@ -84,7 +84,9 @@ services:
       - --global.checknewversion=false
       - --global.sendanonymoususage=false
     ports:
-      - "127.0.0.1:${HTTP_PORT:-8000}:80"
+      # Task 10: loopback by default. HTTP_BIND=0.0.0.0 (or a LAN address) lets k6 on ANOTHER machine reach Traefik;
+      # never set it on a host that is reachable from the internet (APP_ENV=loadtest exposes /_bench and /_debug).
+      - "${HTTP_BIND:-127.0.0.1}:${HTTP_PORT:-8000}:80"
     volumes:
       - ./docker/traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
     healthcheck:
@@ -99,6 +101,11 @@ services:
     networks: [edge]
     cpus: ${TRAEFIK_CPUS:-0.5}
     mem_limit: ${TRAEFIK_MEM_LIMIT:-256m}
+    # Task 10: every proxied connection is two fds here (client side + upstream side).
+    ulimits:
+      nofile:
+        soft: ${TRAEFIK_NOFILE:-65536}
+        hard: ${TRAEFIK_NOFILE:-65536}
     logging: *logging
     restart: unless-stopped
 
@@ -166,8 +173,8 @@ services:
     # stays capped at 1024 per process (docs/chat-protocol.md "Connection ceiling").
     ulimits:
       nofile:
-        soft: 65536
-        hard: 65536
+        soft: ${REVERB_NOFILE:-65536}
+        hard: ${REVERB_NOFILE:-65536}
     # Lets reverb:start close sockets cleanly on SIGTERM; clients reconnect with backoff (Task 11 tunes it).
     stop_grace_period: 15s
     healthcheck:
@@ -281,13 +288,28 @@ services:
   # ---- profile "loadtest": make k6 s=smoke ----
   k6:
     image: ${REGISTRY_PREFIX:-}${K6_IMAGE:-grafana/k6:1.6.1}
+    # Task 10: `never` after `make k6-image-fallback` imported the official binary as a local image (no registry).
+    pull_policy: ${K6_PULL_POLICY:-missing}
     profiles: [loadtest]
     entrypoint: ["k6"]
     command: ["run", "/scripts/smoke.js"]
+    # Task 10: result files must belong to the host user, not to the image's k6 user (uid 12345).
+    user: "${UID:-1000}:${GID:-1000}"
     environment:
       BASE_URL: http://traefik
+      RESULTS_DIR: /results
+      HOME: /tmp
     volumes:
       - ./loadtests:/scripts:ro
+      - ./loadtests/results:/results # the ONLY writable path: handleSummary writes the result JSON here
+    # Each VU connection and each WebSocket is a file descriptor in the k6 process.
+    ulimits:
+      nofile:
+        soft: ${K6_NOFILE:-65536}
+        hard: ${K6_NOFILE:-65536}
+    # Fixed budget for the load generator: it shares the host CPU with the system under test (loadtests/README.md).
+    cpus: ${K6_CPUS:-2}
+    mem_limit: ${K6_MEM_LIMIT:-1g}
     depends_on:
       traefik:
         condition: service_healthy
