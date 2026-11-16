@@ -26,7 +26,7 @@ it('fails the provider boot with STOCK_STRATEGY=naive in production', function (
     config(['inventory.strategy' => 'naive', 'inventory.naive_delay_ms' => 0]);
     app()->detectEnvironment(fn (): string => 'production');
     try {
-        expect(fn () => (new InventoryServiceProvider(app()))->boot())->toThrow(InvalidArgumentException::class, 'STOCK_STRATEGY=naive');
+        expect(fn () => InventoryServiceProvider::assertSafeConfiguration(app()))->toThrow(InvalidArgumentException::class, 'STOCK_STRATEGY=naive');
     } finally {
         app()->detectEnvironment(fn (): string => 'testing');
     }
@@ -36,7 +36,7 @@ it('fails the provider boot with STOCK_NAIVE_DELAY_MS in production even for a s
     config(['inventory.strategy' => 'atomic', 'inventory.naive_delay_ms' => 25]);
     app()->detectEnvironment(fn (): string => 'production');
     try {
-        expect(fn () => (new InventoryServiceProvider(app()))->boot())->toThrow(InvalidArgumentException::class, 'STOCK_NAIVE_DELAY_MS');
+        expect(fn () => InventoryServiceProvider::assertSafeConfiguration(app()))->toThrow(InvalidArgumentException::class, 'STOCK_NAIVE_DELAY_MS');
     } finally {
         app()->detectEnvironment(fn (): string => 'testing');
     }
