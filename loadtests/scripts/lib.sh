@@ -56,7 +56,8 @@ up_app() {
   dc up -d --no-deps --scale "reverb=$REVERB_SCALE" "$@" "${APP_SERVICES[@]}"
   # scheduler has its healthcheck disabled, so --wait would fail on it: wait only for services that have one
   dc up -d --no-deps --wait --wait-timeout "${UP_TIMEOUT:-300}" --scale "reverb=$REVERB_SCALE" app horizon reverb
-  dc up -d --wait --wait-timeout "${UP_TIMEOUT:-300}" --scale "reverb=$REVERB_SCALE" traefik
+  # no --scale here: reverb is not selected, and compose then answers "no such service: reverb: disabled"
+  dc up -d --no-deps --wait --wait-timeout "${UP_TIMEOUT:-300}" traefik
 }
 
 # The N cheapest active products starting at rank OFFSET (deterministic: price, then id), comma separated.
