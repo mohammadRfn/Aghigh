@@ -105,3 +105,21 @@ For job entries the scheduler mutex only covers the push; `ShouldBeUnique` + the
   is 0 on all queues, prints the elapsed seconds (exit 1 on timeout). Task 10 runs it after a burst.
 - `php artisan orders:verify-invariants [--json]`: orders vs reservations vs stock counters vs payments.
   Run it on a drained system.
+
+## Task 10: measuring Horizon memory, CPU and drain time
+
+Status: **not measured yet** (`TODO(measure)`). The load tests record these through the resource sampler
+(`loadtests/scripts/sampler.sh`); the values land in `invariants.resources` and `invariants.queues` of each result.
+
+| What | Value | Command | Where to read it |
+|---|---|---|---|
+| Horizon container memory at peak (all workers together, `docker stats`) | `TODO(measure)` | `make k6-spike` | `invariants.resources.containers.<horizon container>.mem_bytes.peak` |
+| Horizon container memory growth over time | `TODO(measure)` | `make k6-soak DURATION=2h` | `...mem_bytes.slope_per_hour` |
+| Horizon CPU at peak (percent of one core, `docker stats`) | `TODO(measure)` | `make k6-spike` | `invariants.resources.containers.<horizon container>.cpu_pct.peak` |
+| Time for the queues to drain after a 10x spike | `TODO(measure)` | `make k6-spike` | `invariants.queues.elapsed_seconds` |
+| Failed jobs after the spike | `TODO(measure)` | `make k6-spike` | `invariants.queues.failed_jobs` |
+| PgBouncer clients waiting at peak | `TODO(measure)` | `make k6-spike` | `invariants.resources.pgbouncer.cl_waiting.peak` |
+
+`mem_bytes` is the container total, not RSS per worker: divide by the worker count only as an estimate. If the peak
+sits at `HORIZON_MEM_LIMIT` the limit set the number; raise it and measure again before tightening
+`HORIZON_WORKER_MEMORY`. The Task 11 sizing table is `docs/benchmarks/capacity-handoff.md`.

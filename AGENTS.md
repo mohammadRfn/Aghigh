@@ -150,6 +150,24 @@ JSON on stdout, channels `app`, `security`, `audit`, `slow_query`. Sensitive key
   as `RedactSensitiveData`). Never put a closure in config/sentry.php. Stack: `make obs-up`, `make obs-verify`,
   `make obs-down` before any latency baseline (docs/observability.md).
 
+## Load tests (Task 10)
+- Never invent numbers. Thresholds live in `loadtests/config/thresholds.json` with `status: provisional|baseline`
+  (+ baseline date and commit); what was not run is `UNTESTED`, what was not measured is `TODO(measure)` + the make command.
+- Loadtest settings live ONLY in the overlay `compose.loadtest.yaml` (`.env.loadtest`, optional) and are used ONLY by the
+  loadtest make targets (`LT` in the Makefile). Never reference `.env.loadtest` from `compose.yaml` or `compose.prod.yml`
+  (`tests/Unit/LoadtestConfigTest.php`). Per-run switches go to `.env.loadtest.variant`, written by `run-scenario.sh`.
+- Run scenarios through `make k6-<scenario>` (never bare `k6 run`): the target recreates the app containers for the variant,
+  runs k6, then `loadtests/scripts/after-run.sh` (invariants, drain time, metrics snapshot, host info) and fails on any
+  violation. Only `order-flood`/`naive` may violate, and only through `--expect-violations`.
+- Hygiene: `make loadtest-reset` before every run, `make obs-down` for every baseline, 3 runs per variant
+  (`make k6-repeat`), compare only variants run back to back on one machine. `loadtest-reset` flushes only the `state` and
+  `cache` Redis dbs: never FLUSHALL, never the queue db.
+- New scenario: `loadtests/scenarios/<name>.js` using `loadtests/lib/*` (auth, checks, thresholds, summary), an entry in
+  `thresholds.json`, a case in `run-scenario.sh`, a `k6-<name>` target, and the result must follow
+  `loadtests/results/SCHEMA.md` (schema_version 1; Task 12's bench-report reads it). Custom metrics are prefixed `lt_`.
+- Fixtures: `php artisan loadtest:seed-users` (refused outside local/testing/loadtest). Docs: `loadtests/README.md`,
+  `docs/benchmarks/`.
+
 ## Workflow
 One branch per task (`feat/<task>`), conventional commits. Before finishing: `make lint stan test test-int` green.
 Write the docs a task asks for in `docs/`. Mark anything unmeasured as `TODO(measure)`.

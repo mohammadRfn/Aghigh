@@ -12,6 +12,9 @@ groups:
           summary: "More than 2% of HTTP requests answered 5xx over 5 minutes (provisional threshold)."
           runbook: "docs/observability.md#aghighhttp5xxratehigh"
       - alert: AghighHttpP95LatencyHigh
+        # Task 10 calibration: 0.5 s is PROVISIONAL (no baseline run exists yet). After the first baseline replace it with
+        # the budget derived from the measured soak p95, in the same commit that flips loadtests/config/thresholds.json to
+        # status=baseline (loadtests/README.md "Calibration"), then run: make obs-rules-test
         expr: histogram_quantile(0.95, sum by (le) (rate(aghigh_http_request_duration_seconds_bucket[5m]))) > 0.5
         for: 10m
         labels: {severity: warning}

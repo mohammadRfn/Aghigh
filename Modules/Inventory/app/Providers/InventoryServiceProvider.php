@@ -46,12 +46,21 @@ final class InventoryServiceProvider extends ModuleServiceProvider
     public function boot(): void
     {
         parent::boot();
-        self::strategy($this->app); // fail fast on a forbidden or unknown STOCK_STRATEGY
+        self::assertSafeConfiguration($this->app);
+    }
+
+    /**
+     * Fails fast on a forbidden or unknown STOCK_STRATEGY, an unsafe STOCK_NAIVE_DELAY_MS or a bad stock cap.
+     * Separate from boot() so tests can call it without parent::boot() re-merging the module config over theirs.
+     */
+    public static function assertSafeConfiguration(Application $app): void
+    {
+        self::strategy($app);
         $delay = (int) config('inventory.naive_delay_ms');
         if ($delay < 0 || $delay > 60_000) {
             throw new InvalidArgumentException('STOCK_NAIVE_DELAY_MS must be between 0 and 60000.');
         }
-        if ($delay > 0 && ! UnsafeEnvironment::allows((string) $this->app->environment())) {
+        if ($delay > 0 && ! UnsafeEnvironment::allows((string) $app->environment())) {
             throw new InvalidArgumentException('STOCK_NAIVE_DELAY_MS is allowed only in local, testing or loadtest.');
         }
         if ((int) config('inventory.max_stock') < 1) {
