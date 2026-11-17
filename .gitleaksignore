@@ -1,0 +1,4 @@
+# Fake cookie values in the SentryScrubTest fixtures, committed once inside a stray patch file (PR #22 history).
+# The file is gone from main; the weekly scheduled scan still walks the history.
+13a9a9ac7e281f1351f7f6338a3b7ae74dd1c938:aghigh-task9-observability.patch:generic-api-key:2369
+13a9a9ac7e281f1351f7f6338a3b7ae74dd1c938:aghigh-task9-observability.patch:generic-api-key:2380
