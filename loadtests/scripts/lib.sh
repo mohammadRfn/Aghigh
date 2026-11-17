@@ -53,7 +53,9 @@ obs_state() {
 # Bring the app containers up with the overlay (APP_ENV=loadtest from .env.loadtest) and wait until healthy.
 # up_app [--force-recreate]
 up_app() {
-  dc up -d --no-deps --wait --wait-timeout "${UP_TIMEOUT:-300}" --scale "reverb=$REVERB_SCALE" "$@" "${APP_SERVICES[@]}"
+  dc up -d --no-deps --scale "reverb=$REVERB_SCALE" "$@" "${APP_SERVICES[@]}"
+  # scheduler has its healthcheck disabled, so --wait would fail on it: wait only for services that have one
+  dc up -d --no-deps --wait --wait-timeout "${UP_TIMEOUT:-300}" --scale "reverb=$REVERB_SCALE" app horizon reverb
   dc up -d --wait --wait-timeout "${UP_TIMEOUT:-300}" --scale "reverb=$REVERB_SCALE" traefik
 }
 

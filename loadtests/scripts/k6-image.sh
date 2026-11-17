@@ -26,7 +26,7 @@ case "${1:-check}" in
       *) echo "pin: by tag. To pin by digest, copy the RepoDigest printed below into K6_IMAGE=grafana/k6@sha256:<digest>" ;;
     esac
     if docker image inspect "$image" >/dev/null 2>&1; then
-      docker image inspect "$image" --format 'local image id: {{.Id}}{{"\n"}}repo digests:   {{join .RepoDigests ", "}}'
+      docker image inspect "$image" --format 'local image id: {{.Id}}{{"\n"}}repo digests:   {{json .RepoDigests}}'
     else
       echo "the image is not present locally: run 'make pull' (honours REGISTRY_PREFIX), or 'make k6-image-fallback' when the registry cannot serve it"
       exit 1
