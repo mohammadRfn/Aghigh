@@ -15,7 +15,7 @@ const s = steadyScenario({
   users: 200,
   vus: 20,
   maxVus: 100,
-  notes: ['Leak detection lives in invariants.resources.slopes (filled by after-run.sh from the sampler file), not in the k6 metrics.'],
+  notes: ['Leak detection lives in invariants.resources.containers.<name>.mem_bytes.slope_per_hour (also redis, postgres, reverb series) (filled by after-run.sh from the sampler file), not in the k6 metrics.'],
 });
 
 export const options = s.options;

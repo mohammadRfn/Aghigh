@@ -176,8 +176,8 @@ k6-websocket-chat: ## WebSocket chat (MODE=ceiling|fanout|reconnect-jitter|recon
 k6-auth-abuse: ## Credential stuffing with RATE_LIMIT_MULTIPLIER unset: 429 at the configured limit, XFF ignored, lockout, cross-IP login
 > @$(LT_RUN) auth-abuse default
 
-k6-metrics-overhead: ## Same load with metrics off/on and tracing on (METRICS=metrics-off|metrics-on|traces-on|obs-up|all)
-> @for v in $(if $(filter all,$(METRICS)),metrics-off metrics-on traces-on,$(METRICS)); do $(LT_RUN) metrics-overhead $$v || exit 1; done
+k6-metrics-overhead: ## Same load with metrics off/on and tracing on (METRICS=metrics-off|metrics-on|obs-up|traces-on|all; traces-on needs make obs-up, all = off+on)
+> @for v in $(if $(filter all,$(METRICS)),metrics-off metrics-on,$(METRICS)); do $(LT_RUN) metrics-overhead $$v || exit 1; done
 
 k6-repeat: ## Hygiene: reset + run + cooldown, RUNS times, then median/min/max (TARGET=k6-catalog RUNS=3 COOLDOWN=60 ARGS="STRATEGY=atomic")
 > @RUNS=$(or $(RUNS),3) COOLDOWN=$(or $(COOLDOWN),60) RESET=$(or $(RESET),1) ARGS="$(ARGS)" ./loadtests/scripts/repeat.sh $(TARGET)
