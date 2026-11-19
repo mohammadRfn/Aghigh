@@ -285,17 +285,18 @@ export const handleSummary = makeHandleSummary({
     const tr = result.metrics.trends;
     if (MODE === 'ceiling') {
       const position = tr.lt_ws_ceiling_position;
-      const reached = !!position && position.count > 0;
+      const reached = !!position && position.count >= C_STOP_AFTER; // fewer failures than STOP_AFTER_FAILURES is noise, not a ceiling
       result.metrics.derived = {
         connections_established: c.lt_ws_connect_ok,
         handshake_failures: c.lt_ws_connect_failed,
         ceiling_reached: reached,
         ceiling_approx_connections: reached ? position.min : null, // APPROXIMATE, see the header of this file
         ceiling_is_approximate: true,
+        first_failure_position: position && position.count > 0 ? position.min : null,
       };
       result.notes.push(reached
         ? 'ceiling_approx_connections is approximate (ramp position of the first failed handshake, all Reverb replicas together). Per-replica sockets and fds: invariants.resources.'
-        : `No handshake failed up to ${C_VUS * C_PER_VU} connections: the ceiling was NOT reached. Raise VUS or CONNS_PER_VU.`);
+        : `Fewer than ${C_STOP_AFTER} handshakes failed up to ${C_VUS * C_PER_VU} connections: the ceiling was NOT reached. Raise VUS or CONNS_PER_VU.`);
     } else if (MODE === 'fanout') {
       result.metrics.derived = {
         messages_sent: c.lt_ws_messages_sent,
