@@ -1,0 +1,61 @@
+{
+  "summary_schema_version": 1,
+  "generated_at": "2026-11-19T12:10:07Z",
+  "groups": [
+    {
+      "scenario": "websocket-chat",
+      "variant": "fanout-r1",
+      "runs": 3,
+      "enough_runs": true,
+      "run_ids": [
+        "20261119T120455Z",
+        "20261119T120706Z",
+        "20261119T120916Z"
+      ],
+      "git_shas": [
+        "49e2785990a948b95fd415249b3dccd5ecc9d9f8"
+      ],
+      "any_dirty": false,
+      "observability_stack": [
+        "down"
+      ],
+      "all_verdicts_passed": true,
+      "p50": {
+        "median": 17.263,
+        "min": 16.252,
+        "max": 18.699,
+        "n": 3
+      },
+      "p90": {
+        "median": 194.836,
+        "min": 188.303,
+        "max": 206.717,
+        "n": 3
+      },
+      "p95": {
+        "median": 235.776,
+        "min": 230.643,
+        "max": 244.785,
+        "n": 3
+      },
+      "p99": {
+        "median": 315.633,
+        "min": 300.028,
+        "max": 356.834,
+        "n": 3
+      },
+      "rps": {
+        "median": 45.52,
+        "min": 45.45,
+        "max": 45.54,
+        "n": 3
+      },
+      "error_rate": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 3
+      }
+    }
+  ]
+}
