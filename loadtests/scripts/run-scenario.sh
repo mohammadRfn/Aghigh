@@ -53,7 +53,7 @@ case "$SCENARIO" in
     case "$VARIANT" in
       metrics-off) variant_lines+=("METRICS_ENABLED=false" "SENTRY_TRACES_SAMPLE_RATE=0.0") ;;
       metrics-on) variant_lines+=("METRICS_ENABLED=true" "SENTRY_TRACES_SAMPLE_RATE=0.0") ;;
-      traces-on) variant_lines+=("METRICS_ENABLED=true" "SENTRY_TRACES_SAMPLE_RATE=0.05") ;;
+      traces-on) variant_lines+=("METRICS_ENABLED=true" "SENTRY_TRACES_SAMPLE_RATE=0.05"); WANT_OBS="up" ;;
       obs-up) variant_lines+=("METRICS_ENABLED=true" "SENTRY_TRACES_SAMPLE_RATE=0.0"); WANT_OBS="up" ;;
       *) die "metrics-overhead variants: metrics-off | metrics-on | traces-on | obs-up" ;;
     esac
