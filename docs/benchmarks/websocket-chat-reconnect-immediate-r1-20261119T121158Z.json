@@ -1,0 +1,691 @@
+{
+  "schema_version": 1,
+  "scenario": "websocket-chat",
+  "variant": "reconnect-immediate-r1",
+  "run": {
+    "id": "20261119T121158Z",
+    "git_sha": "49e2785990a948b95fd415249b3dccd5ecc9d9f8",
+    "git_dirty": false,
+    "started_at": "2026-11-19T12:12:06.259Z",
+    "finished_at": "2026-11-19T12:13:26.396Z",
+    "duration_seconds": 80.1,
+    "k6_version": "k6 v1.6.1 (commit/2ac2bb560e, go1.25.7, linux/amd64)",
+    "base_url": "http://traefik",
+    "params": {
+      "mode": "reconnect",
+      "policy": "immediate",
+      "trigger": "server",
+      "sockets": 500,
+      "storm_at_seconds": 20,
+      "observe_seconds": 60,
+      "backoff_base_ms": 1000,
+      "backoff_cap_ms": 30000
+    },
+    "env": {
+      "APP_ENV": "loadtest",
+      "APP_DEBUG": "false",
+      "LOG_LEVEL": "warning",
+      "STOCK_STRATEGY": "atomic",
+      "STOCK_NAIVE_DELAY_MS": "0",
+      "METRICS_ENABLED": "true",
+      "RATE_LIMIT_MULTIPLIER": "100",
+      "REVERB_SCALE": "1",
+      "SENTRY_TRACES_SAMPLE_RATE": "0.0",
+      "SENTRY_DSN_SET": "true",
+      "observability_stack": "down"
+    }
+  },
+  "host": {
+    "collected_at": "2026-11-19T12:13:31Z",
+    "cpu": {
+      "model": "Intel(R) Core(TM) i7-10750H CPU @ 2.60GHz",
+      "logical_cpus": 12
+    },
+    "memory_total_bytes": 8257286144,
+    "os": "Ubuntu 26.04.1 LTS",
+    "kernel": "Linux 6.18.58.1-microsoft-standard-WSL2",
+    "wsl2": true,
+    "wslconfig": {
+      "path": "not found: no .wslconfig means WSL defaults (50% of host RAM, all cores). Set WSLCONFIG_PATH if it lives elsewhere."
+    },
+    "power_source": "ac",
+    "host_ulimit_nofile": "10240",
+    "docker": {
+      "client_version": "29.1.3",
+      "server_version": "29.1.3",
+      "compose_version": "2.40.3",
+      "context": "default",
+      "engine": {
+        "operating_system": "Ubuntu 26.04.1 LTS",
+        "name": "MohammadRaufian",
+        "cpus": 12,
+        "memory_bytes": 8257286144,
+        "storage_driver": "overlayfs"
+      }
+    },
+    "compose_limits": {
+      "app": {
+        "cpus": 2,
+        "mem_limit": "3221225472"
+      },
+      "horizon": {
+        "cpus": 1.5,
+        "mem_limit": "1342177280"
+      },
+      "mailpit": {
+        "cpus": 0.25,
+        "mem_limit": "134217728"
+      },
+      "pgbouncer": {
+        "cpus": 0.5,
+        "mem_limit": "134217728"
+      },
+      "postgres": {
+        "cpus": 2,
+        "mem_limit": "1073741824"
+      },
+      "redis-cache": {
+        "cpus": 0.5,
+        "mem_limit": "402653184"
+      },
+      "redis-queue": {
+        "cpus": 0.5,
+        "mem_limit": "402653184"
+      },
+      "reverb": {
+        "cpus": 1,
+        "mem_limit": "536870912"
+      },
+      "scheduler": {
+        "cpus": 1,
+        "mem_limit": "536870912"
+      },
+      "traefik": {
+        "cpus": 0.5,
+        "mem_limit": "268435456"
+      }
+    },
+    "versions": {
+      "php": "8.5.12",
+      "laravel": "Laravel Framework 13.42.0",
+      "octane_workers": 2,
+      "postgres": "18.7(Debian18.7-1.pgdg13+2)",
+      "redis_queue": "8.10.3",
+      "redis_cache": "8.10.3",
+      "pgbouncer": "PgBouncer 1.26.1",
+      "reverb_replicas": 1
+    }
+  },
+  "metrics": {
+    "p50": null,
+    "p90": null,
+    "p95": null,
+    "p99": null,
+    "rps": null,
+    "error_rate": null,
+    "unit": "ms",
+    "http": null,
+    "phases": {},
+    "iterations": {
+      "count": 10,
+      "rate": 0.12,
+      "dropped": 0
+    },
+    "counters": {
+      "lt_ws_connect_failed": 139,
+      "lt_ws_connect_ok": 1000,
+      "lt_ws_dropped": 500,
+      "lt_ws_reconnect_attempts": 639,
+      "lt_ws_reconnect_attempts{win:0}": 0,
+      "lt_ws_reconnect_attempts{win:10}": 0,
+      "lt_ws_reconnect_attempts{win:11}": 0,
+      "lt_ws_reconnect_attempts{win:12}": 0,
+      "lt_ws_reconnect_attempts{win:13}": 0,
+      "lt_ws_reconnect_attempts{win:14}": 0,
+      "lt_ws_reconnect_attempts{win:15}": 0,
+      "lt_ws_reconnect_attempts{win:16}": 0,
+      "lt_ws_reconnect_attempts{win:17}": 0,
+      "lt_ws_reconnect_attempts{win:18}": 0,
+      "lt_ws_reconnect_attempts{win:19}": 0,
+      "lt_ws_reconnect_attempts{win:1}": 0,
+      "lt_ws_reconnect_attempts{win:20}": 0,
+      "lt_ws_reconnect_attempts{win:21}": 0,
+      "lt_ws_reconnect_attempts{win:22}": 0,
+      "lt_ws_reconnect_attempts{win:23}": 0,
+      "lt_ws_reconnect_attempts{win:24}": 0,
+      "lt_ws_reconnect_attempts{win:25}": 0,
+      "lt_ws_reconnect_attempts{win:26}": 639,
+      "lt_ws_reconnect_attempts{win:27}": 0,
+      "lt_ws_reconnect_attempts{win:28}": 0,
+      "lt_ws_reconnect_attempts{win:29}": 0,
+      "lt_ws_reconnect_attempts{win:2}": 0,
+      "lt_ws_reconnect_attempts{win:30}": 0,
+      "lt_ws_reconnect_attempts{win:31}": 0,
+      "lt_ws_reconnect_attempts{win:32}": 0,
+      "lt_ws_reconnect_attempts{win:33}": 0,
+      "lt_ws_reconnect_attempts{win:34}": 0,
+      "lt_ws_reconnect_attempts{win:35}": 0,
+      "lt_ws_reconnect_attempts{win:36}": 0,
+      "lt_ws_reconnect_attempts{win:37}": 0,
+      "lt_ws_reconnect_attempts{win:38}": 0,
+      "lt_ws_reconnect_attempts{win:39}": 0,
+      "lt_ws_reconnect_attempts{win:3}": 0,
+      "lt_ws_reconnect_attempts{win:40}": 0,
+      "lt_ws_reconnect_attempts{win:41}": 0,
+      "lt_ws_reconnect_attempts{win:42}": 0,
+      "lt_ws_reconnect_attempts{win:43}": 0,
+      "lt_ws_reconnect_attempts{win:44}": 0,
+      "lt_ws_reconnect_attempts{win:45}": 0,
+      "lt_ws_reconnect_attempts{win:46}": 0,
+      "lt_ws_reconnect_attempts{win:47}": 0,
+      "lt_ws_reconnect_attempts{win:48}": 0,
+      "lt_ws_reconnect_attempts{win:49}": 0,
+      "lt_ws_reconnect_attempts{win:4}": 0,
+      "lt_ws_reconnect_attempts{win:50}": 0,
+      "lt_ws_reconnect_attempts{win:51}": 0,
+      "lt_ws_reconnect_attempts{win:52}": 0,
+      "lt_ws_reconnect_attempts{win:53}": 0,
+      "lt_ws_reconnect_attempts{win:54}": 0,
+      "lt_ws_reconnect_attempts{win:55}": 0,
+      "lt_ws_reconnect_attempts{win:56}": 0,
+      "lt_ws_reconnect_attempts{win:57}": 0,
+      "lt_ws_reconnect_attempts{win:58}": 0,
+      "lt_ws_reconnect_attempts{win:59}": 0,
+      "lt_ws_reconnect_attempts{win:5}": 0,
+      "lt_ws_reconnect_attempts{win:60}": 0,
+      "lt_ws_reconnect_attempts{win:61}": 0,
+      "lt_ws_reconnect_attempts{win:62}": 0,
+      "lt_ws_reconnect_attempts{win:63}": 0,
+      "lt_ws_reconnect_attempts{win:64}": 0,
+      "lt_ws_reconnect_attempts{win:65}": 0,
+      "lt_ws_reconnect_attempts{win:66}": 0,
+      "lt_ws_reconnect_attempts{win:67}": 0,
+      "lt_ws_reconnect_attempts{win:68}": 0,
+      "lt_ws_reconnect_attempts{win:69}": 0,
+      "lt_ws_reconnect_attempts{win:6}": 0,
+      "lt_ws_reconnect_attempts{win:70}": 0,
+      "lt_ws_reconnect_attempts{win:71}": 0,
+      "lt_ws_reconnect_attempts{win:72}": 0,
+      "lt_ws_reconnect_attempts{win:73}": 0,
+      "lt_ws_reconnect_attempts{win:74}": 0,
+      "lt_ws_reconnect_attempts{win:75}": 0,
+      "lt_ws_reconnect_attempts{win:76}": 0,
+      "lt_ws_reconnect_attempts{win:77}": 0,
+      "lt_ws_reconnect_attempts{win:78}": 0,
+      "lt_ws_reconnect_attempts{win:79}": 0,
+      "lt_ws_reconnect_attempts{win:7}": 0,
+      "lt_ws_reconnect_attempts{win:80}": 0,
+      "lt_ws_reconnect_attempts{win:8}": 0,
+      "lt_ws_reconnect_attempts{win:9}": 0,
+      "lt_ws_reconnect_failed": 139
+    },
+    "rates": {
+      "lt_ws_unrecovered": {
+        "rate": 0,
+        "passes": 0,
+        "fails": 500
+      }
+    },
+    "trends": {
+      "lt_ws_handshake_ms": {
+        "p50": 594.5,
+        "p90": 4269,
+        "p95": 4273.05,
+        "p99": 4297,
+        "avg": 1431.17,
+        "min": 2,
+        "max": 4337,
+        "count": 1000
+      },
+      "lt_ws_recover_ms": {
+        "p50": 4267,
+        "p90": 4360,
+        "p95": 4364,
+        "p99": 4388,
+        "avg": 2893.682,
+        "min": 1114,
+        "max": 4392,
+        "count": 500
+      }
+    },
+    "gauges": {},
+    "derived": {
+      "policy": "immediate",
+      "reconnect_attempts": 639,
+      "reconnect_failed_attempts": 139,
+      "peak_attempts_per_second": 639,
+      "recover_p50_ms": 4267,
+      "recover_p95_ms": 4364,
+      "recover_max_ms": 4392,
+      "unrecovered_rate": 0,
+      "attempts_timeline": [
+        {
+          "window": 26,
+          "t_start_s": 26,
+          "count": 639
+        }
+      ]
+    }
+  },
+  "thresholds": [
+    {
+      "metric": "lt_ws_recover_ms",
+      "expression": "p(95)<30000",
+      "kind": "performance",
+      "value": 4364,
+      "passed": true,
+      "provisional": true,
+      "status": "provisional",
+      "baseline_date": null,
+      "baseline_commit": null
+    },
+    {
+      "metric": "lt_ws_unrecovered",
+      "expression": "rate<0.01",
+      "kind": "performance",
+      "value": 0,
+      "passed": true,
+      "provisional": true,
+      "status": "provisional",
+      "baseline_date": null,
+      "baseline_commit": null
+    }
+  ],
+  "checks": [],
+  "invariants": {
+    "orders": {
+      "ok": true,
+      "orders_checked": 0,
+      "violation_count": 0,
+      "violations": []
+    },
+    "chat": {
+      "ok": true,
+      "violation_count": 0,
+      "violations": []
+    },
+    "app_metrics": {
+      "snapshot_file": "websocket-chat-reconnect-immediate-r1-20261119T121158Z.metrics.prom",
+      "sample_lines": 115,
+      "aghigh_metrics_series": 93
+    },
+    "resources": {
+      "sampler_file": "websocket-chat-reconnect-immediate-r1-20261119T121158Z.samples.ndjson",
+      "samples": 6,
+      "window_seconds": 72,
+      "note": "slope_per_hour = least squares over the whole sampler window; null below 3 samples. Units: bytes, connections, percent.",
+      "redis": {
+        "queue_used_memory_bytes": {
+          "samples": 6,
+          "first": 28906992,
+          "last": 28904696,
+          "min": 28904696,
+          "peak": 28914456,
+          "slope_per_hour": -207104.63
+        },
+        "cache_used_memory_bytes": {
+          "samples": 6,
+          "first": 1610776,
+          "last": 1610776,
+          "min": 1610776,
+          "peak": 1610776,
+          "slope_per_hour": 0
+        }
+      },
+      "postgres": {
+        "connections": {
+          "samples": 6,
+          "first": 5,
+          "last": 5,
+          "min": 5,
+          "peak": 5,
+          "slope_per_hour": 0
+        }
+      },
+      "pgbouncer": {
+        "cl_active": {
+          "samples": 6,
+          "first": 3,
+          "last": 3,
+          "min": 3,
+          "peak": 3,
+          "slope_per_hour": 0
+        },
+        "cl_waiting": {
+          "samples": 6,
+          "first": 0,
+          "last": 0,
+          "min": 0,
+          "peak": 0,
+          "slope_per_hour": 0
+        },
+        "sv_active": {
+          "samples": 6,
+          "first": 0,
+          "last": 0,
+          "min": 0,
+          "peak": 0,
+          "slope_per_hour": 0
+        },
+        "sv_idle": {
+          "samples": 6,
+          "first": 1,
+          "last": 1,
+          "min": 1,
+          "peak": 1,
+          "slope_per_hour": 0
+        },
+        "maxwait_seconds": {
+          "samples": 6,
+          "first": 0,
+          "last": 0,
+          "min": 0,
+          "peak": 0,
+          "slope_per_hour": 0
+        }
+      },
+      "app_metrics": {
+        "aghigh_metrics_series": {
+          "samples": 6,
+          "first": 93,
+          "last": 93,
+          "min": 93,
+          "peak": 93,
+          "slope_per_hour": 0
+        }
+      },
+      "containers": {
+        "aghigh-app-1": {
+          "mem_bytes": {
+            "samples": 6,
+            "first": 236349030,
+            "last": 232049868,
+            "min": 232049868,
+            "peak": 236349030,
+            "slope_per_hour": -159032221.06
+          },
+          "cpu_pct": {
+            "samples": 6,
+            "first": 0.99,
+            "last": 1.37,
+            "min": 0.99,
+            "peak": 6.22,
+            "slope_per_hour": -15.59
+          },
+          "pids": {
+            "samples": 6,
+            "first": 14,
+            "last": 14,
+            "min": 14,
+            "peak": 14,
+            "slope_per_hour": 0
+          }
+        },
+        "aghigh-horizon-1": {
+          "mem_bytes": {
+            "samples": 6,
+            "first": 458332569,
+            "last": 460429721,
+            "min": 458332569,
+            "peak": 512019660,
+            "slope_per_hour": 1200484136.43
+          },
+          "cpu_pct": {
+            "samples": 6,
+            "first": 0.49,
+            "last": 0.42,
+            "min": 0.42,
+            "peak": 1.66,
+            "slope_per_hour": -13.66
+          },
+          "pids": {
+            "samples": 6,
+            "first": 9,
+            "last": 9,
+            "min": 9,
+            "peak": 10,
+            "slope_per_hour": 14.38
+          }
+        },
+        "aghigh-mailpit-1": {
+          "mem_bytes": {
+            "samples": 6,
+            "first": 23341301,
+            "last": 23341301,
+            "min": 23341301,
+            "peak": 24305991,
+            "slope_per_hour": 20644724.96
+          },
+          "cpu_pct": {
+            "samples": 6,
+            "first": 0.00,
+            "last": 0.00,
+            "min": 0.00,
+            "peak": 0.00,
+            "slope_per_hour": 0
+          },
+          "pids": {
+            "samples": 6,
+            "first": 12,
+            "last": 12,
+            "min": 12,
+            "peak": 12,
+            "slope_per_hour": 0
+          }
+        },
+        "aghigh-pgbouncer-1": {
+          "mem_bytes": {
+            "samples": 6,
+            "first": 12299796,
+            "last": 11418992,
+            "min": 11324620,
+            "peak": 12299796,
+            "slope_per_hour": -29010865.71
+          },
+          "cpu_pct": {
+            "samples": 6,
+            "first": 2.86,
+            "last": 0.02,
+            "min": 0.01,
+            "peak": 2.86,
+            "slope_per_hour": -101.18
+          },
+          "pids": {
+            "samples": 6,
+            "first": 1,
+            "last": 1,
+            "min": 1,
+            "peak": 1,
+            "slope_per_hour": 0
+          }
+        },
+        "aghigh-postgres-1": {
+          "mem_bytes": {
+            "samples": 6,
+            "first": 305974476,
+            "last": 306184192,
+            "min": 304296755,
+            "peak": 306184192,
+            "slope_per_hour": 119946.47
+          },
+          "cpu_pct": {
+            "samples": 6,
+            "first": 5.26,
+            "last": 5.27,
+            "min": 0.00,
+            "peak": 5.27,
+            "slope_per_hour": -1.8
+          },
+          "pids": {
+            "samples": 6,
+            "first": 13,
+            "last": 13,
+            "min": 13,
+            "peak": 13,
+            "slope_per_hour": 0
+          }
+        },
+        "aghigh-redis-cache-1": {
+          "mem_bytes": {
+            "samples": 6,
+            "first": 15078522,
+            "last": 15571353,
+            "min": 15078522,
+            "peak": 15571353,
+            "slope_per_hour": 20923955.22
+          },
+          "cpu_pct": {
+            "samples": 6,
+            "first": 0.37,
+            "last": 0.59,
+            "min": 0.37,
+            "peak": 3.69,
+            "slope_per_hour": 13.51
+          },
+          "pids": {
+            "samples": 6,
+            "first": 6,
+            "last": 6,
+            "min": 6,
+            "peak": 6,
+            "slope_per_hour": 0
+          }
+        },
+        "aghigh-redis-queue-1": {
+          "mem_bytes": {
+            "samples": 6,
+            "first": 49304043,
+            "last": 50331648,
+            "min": 49304043,
+            "peak": 50331648,
+            "slope_per_hour": 49391811.32
+          },
+          "cpu_pct": {
+            "samples": 6,
+            "first": 3.44,
+            "last": 0.47,
+            "min": 0.47,
+            "peak": 3.44,
+            "slope_per_hour": -108.94
+          },
+          "pids": {
+            "samples": 6,
+            "first": 6,
+            "last": 6,
+            "min": 6,
+            "peak": 6,
+            "slope_per_hour": 0
+          }
+        },
+        "aghigh-reverb-1": {
+          "mem_bytes": {
+            "samples": 6,
+            "first": 65179484,
+            "last": 66112716,
+            "min": 58269368,
+            "peak": 67371008,
+            "slope_per_hour": 60839538.01
+          },
+          "cpu_pct": {
+            "samples": 6,
+            "first": 0.00,
+            "last": 0.03,
+            "min": 0.00,
+            "peak": 0.39,
+            "slope_per_hour": 9.4
+          },
+          "pids": {
+            "samples": 6,
+            "first": 1,
+            "last": 1,
+            "min": 1,
+            "peak": 1,
+            "slope_per_hour": 0
+          }
+        },
+        "aghigh-scheduler-1": {
+          "mem_bytes": {
+            "samples": 6,
+            "first": 100883496,
+            "last": 101386813,
+            "min": 100883496,
+            "peak": 101397299,
+            "slope_per_hour": 23370078.2
+          },
+          "cpu_pct": {
+            "samples": 6,
+            "first": 0.69,
+            "last": 1.05,
+            "min": 0.69,
+            "peak": 1.33,
+            "slope_per_hour": 17.23
+          },
+          "pids": {
+            "samples": 6,
+            "first": 3,
+            "last": 3,
+            "min": 3,
+            "peak": 3,
+            "slope_per_hour": 0
+          }
+        },
+        "aghigh-traefik-1": {
+          "mem_bytes": {
+            "samples": 6,
+            "first": 75497472,
+            "last": 125409689,
+            "min": 75497472,
+            "peak": 125409689,
+            "slope_per_hour": 2605750497.07
+          },
+          "cpu_pct": {
+            "samples": 6,
+            "first": 0.00,
+            "last": 0.00,
+            "min": 0.00,
+            "peak": 7.12,
+            "slope_per_hour": -177.55
+          },
+          "pids": {
+            "samples": 6,
+            "first": 8,
+            "last": 8,
+            "min": 8,
+            "peak": 8,
+            "slope_per_hour": 0
+          }
+        }
+      },
+      "reverb": {
+        "aghigh-reverb-1": {
+          "established_sockets": {
+            "samples": 6,
+            "first": 500,
+            "last": 500,
+            "min": 230,
+            "peak": 500,
+            "slope_per_hour": 1896.63
+          },
+          "open_fds": {
+            "samples": 6,
+            "first": 515,
+            "last": 515,
+            "min": 515,
+            "peak": 515,
+            "slope_per_hour": 0
+          }
+        }
+      }
+    },
+    "verdict": {
+      "passed": true,
+      "expected_violations": false,
+      "failures": [],
+      "k6_exit_code": 0
+    }
+  },
+  "notes": [
+    "Performance thresholds are PROVISIONAL (no baseline yet): a miss is recorded here but does not fail the make target.",
+    "Compare reconnect-jitter with reconnect-immediate only between runs made back to back with the same SOCKETS and trigger."
+  ]
+}

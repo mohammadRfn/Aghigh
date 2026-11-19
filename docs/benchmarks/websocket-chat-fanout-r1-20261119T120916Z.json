@@ -1,0 +1,677 @@
+{
+  "schema_version": 1,
+  "scenario": "websocket-chat",
+  "variant": "fanout-r1",
+  "run": {
+    "id": "20261119T120916Z",
+    "git_sha": "49e2785990a948b95fd415249b3dccd5ecc9d9f8",
+    "git_dirty": false,
+    "started_at": "2026-11-19T12:09:24.617Z",
+    "finished_at": "2026-11-19T12:10:01.908Z",
+    "duration_seconds": 38.4,
+    "k6_version": "k6 v1.6.1 (commit/2ac2bb560e, go1.25.7, linux/amd64)",
+    "base_url": "http://traefik",
+    "params": {
+      "mode": "fanout",
+      "conversations": 50,
+      "sockets_per_conversation": 4,
+      "messages_per_conversation": 30,
+      "message_interval_ms": 1000,
+      "settle_ms": 5000
+    },
+    "env": {
+      "APP_ENV": "loadtest",
+      "APP_DEBUG": "false",
+      "LOG_LEVEL": "warning",
+      "STOCK_STRATEGY": "atomic",
+      "STOCK_NAIVE_DELAY_MS": "0",
+      "METRICS_ENABLED": "true",
+      "RATE_LIMIT_MULTIPLIER": "100",
+      "REVERB_SCALE": "1",
+      "SENTRY_TRACES_SAMPLE_RATE": "0.0",
+      "SENTRY_DSN_SET": "true",
+      "observability_stack": "down"
+    }
+  },
+  "host": {
+    "collected_at": "2026-11-19T12:10:07Z",
+    "cpu": {
+      "model": "Intel(R) Core(TM) i7-10750H CPU @ 2.60GHz",
+      "logical_cpus": 12
+    },
+    "memory_total_bytes": 8257286144,
+    "os": "Ubuntu 26.04.1 LTS",
+    "kernel": "Linux 6.18.58.1-microsoft-standard-WSL2",
+    "wsl2": true,
+    "wslconfig": {
+      "path": "not found: no .wslconfig means WSL defaults (50% of host RAM, all cores). Set WSLCONFIG_PATH if it lives elsewhere."
+    },
+    "power_source": "ac",
+    "host_ulimit_nofile": "10240",
+    "docker": {
+      "client_version": "29.1.3",
+      "server_version": "29.1.3",
+      "compose_version": "2.40.3",
+      "context": "default",
+      "engine": {
+        "operating_system": "Ubuntu 26.04.1 LTS",
+        "name": "MohammadRaufian",
+        "cpus": 12,
+        "memory_bytes": 8257286144,
+        "storage_driver": "overlayfs"
+      }
+    },
+    "compose_limits": {
+      "app": {
+        "cpus": 2,
+        "mem_limit": "3221225472"
+      },
+      "horizon": {
+        "cpus": 1.5,
+        "mem_limit": "1342177280"
+      },
+      "mailpit": {
+        "cpus": 0.25,
+        "mem_limit": "134217728"
+      },
+      "pgbouncer": {
+        "cpus": 0.5,
+        "mem_limit": "134217728"
+      },
+      "postgres": {
+        "cpus": 2,
+        "mem_limit": "1073741824"
+      },
+      "redis-cache": {
+        "cpus": 0.5,
+        "mem_limit": "402653184"
+      },
+      "redis-queue": {
+        "cpus": 0.5,
+        "mem_limit": "402653184"
+      },
+      "reverb": {
+        "cpus": 1,
+        "mem_limit": "536870912"
+      },
+      "scheduler": {
+        "cpus": 1,
+        "mem_limit": "536870912"
+      },
+      "traefik": {
+        "cpus": 0.5,
+        "mem_limit": "268435456"
+      }
+    },
+    "versions": {
+      "php": "8.5.12",
+      "laravel": "Laravel Framework 13.42.0",
+      "octane_workers": 2,
+      "postgres": "18.7(Debian18.7-1.pgdg13+2)",
+      "redis_queue": "8.10.3",
+      "redis_cache": "8.10.3",
+      "pgbouncer": "PgBouncer 1.26.1",
+      "reverb_replicas": 1
+    }
+  },
+  "metrics": {
+    "p50": 18.699,
+    "p90": 194.836,
+    "p95": 230.643,
+    "p99": 356.834,
+    "rps": 45.52,
+    "error_rate": 0,
+    "unit": "ms",
+    "http": {
+      "scope": "phase:main",
+      "p50": 18.699,
+      "p90": 194.836,
+      "p95": 230.643,
+      "p99": 356.834,
+      "avg": 54.889,
+      "min": 11.773,
+      "max": 393.986,
+      "requests": 1750,
+      "rps": 45.52,
+      "rps_basis": "k6 rate over the whole test (setup and warm-up included)",
+      "error_rate": 0
+    },
+    "phases": {
+      "main": {
+        "scope": "phase:main",
+        "p50": 18.699,
+        "p90": 194.836,
+        "p95": 230.643,
+        "p99": 356.834,
+        "avg": 54.889,
+        "min": 11.773,
+        "max": 393.986,
+        "requests": 1750,
+        "rps": 45.52,
+        "rps_basis": "k6 rate over the whole test (setup and warm-up included)",
+        "error_rate": 0
+      }
+    },
+    "iterations": {
+      "count": 50,
+      "rate": 1.3,
+      "dropped": 0
+    },
+    "counters": {
+      "lt_http_5xx": 0,
+      "lt_ws_connect_failed": 0,
+      "lt_ws_connect_ok": 200,
+      "lt_ws_deliveries": 6000,
+      "lt_ws_dropped": 0,
+      "lt_ws_messages_sent": 1500
+    },
+    "rates": {
+      "lt_unexpected_response": {
+        "rate": 0,
+        "passes": 0,
+        "fails": 1550
+      },
+      "lt_ws_delivery_missed": {
+        "rate": 0,
+        "passes": 0,
+        "fails": 6000
+      }
+    },
+    "trends": {
+      "lt_ws_delivery_ms": {
+        "p50": 486,
+        "p90": 909.1,
+        "p95": 1000.05,
+        "p99": 1153.06,
+        "avg": 505.639,
+        "min": 20,
+        "max": 1183,
+        "count": 6000
+      },
+      "lt_ws_handshake_ms": {
+        "p50": 3,
+        "p90": 7.2,
+        "p95": 17,
+        "p99": 24.04,
+        "avg": 4.53,
+        "min": 2,
+        "max": 28,
+        "count": 200
+      }
+    },
+    "gauges": {},
+    "derived": {
+      "messages_sent": 1500,
+      "deliveries": 6000,
+      "delivery_p50_ms": 486,
+      "delivery_p95_ms": 1000.05,
+      "delivery_p99_ms": 1153.06,
+      "delivery_missed_rate": 0
+    }
+  },
+  "thresholds": [
+    {
+      "metric": "http_req_duration{phase:main}",
+      "expression": "p(95)<500",
+      "kind": "performance",
+      "value": 230.643237,
+      "passed": true,
+      "provisional": true,
+      "status": "provisional",
+      "baseline_date": null,
+      "baseline_commit": null
+    },
+    {
+      "metric": "lt_http_5xx",
+      "expression": "count==0",
+      "kind": "assertion",
+      "value": 0,
+      "passed": true,
+      "provisional": false,
+      "status": "assertion",
+      "baseline_date": null,
+      "baseline_commit": null
+    },
+    {
+      "metric": "lt_ws_delivery_missed",
+      "expression": "rate<0.01",
+      "kind": "performance",
+      "value": 0,
+      "passed": true,
+      "provisional": true,
+      "status": "provisional",
+      "baseline_date": null,
+      "baseline_commit": null
+    },
+    {
+      "metric": "lt_ws_delivery_ms",
+      "expression": "p(95)<2000",
+      "kind": "performance",
+      "value": 1000.05,
+      "passed": true,
+      "provisional": true,
+      "status": "provisional",
+      "baseline_date": null,
+      "baseline_commit": null
+    }
+  ],
+  "checks": [
+    {
+      "name": "conversation opened (201/200)",
+      "group": "",
+      "passes": 50,
+      "fails": 0,
+      "rate": 1
+    },
+    {
+      "name": "subscribed to own conversation channel",
+      "group": "",
+      "passes": 200,
+      "fails": 0,
+      "rate": 1
+    },
+    {
+      "name": "message persisted (201)",
+      "group": "",
+      "passes": 1500,
+      "fails": 0,
+      "rate": 1
+    }
+  ],
+  "invariants": {
+    "orders": {
+      "ok": true,
+      "orders_checked": 0,
+      "violation_count": 0,
+      "violations": []
+    },
+    "chat": {
+      "ok": true,
+      "violation_count": 0,
+      "violations": []
+    },
+    "app_metrics": {
+      "snapshot_file": "websocket-chat-fanout-r1-20261119T120916Z.metrics.prom",
+      "sample_lines": 305,
+      "aghigh_metrics_series": 283
+    },
+    "resources": {
+      "sampler_file": "websocket-chat-fanout-r1-20261119T120916Z.samples.ndjson",
+      "samples": 3,
+      "window_seconds": 30,
+      "note": "slope_per_hour = least squares over the whole sampler window; null below 3 samples. Units: bytes, connections, percent.",
+      "redis": {
+        "queue_used_memory_bytes": {
+          "samples": 3,
+          "first": 25577440,
+          "last": 28493736,
+          "min": 25577440,
+          "peak": 28493736,
+          "slope_per_hour": 349955520
+        },
+        "cache_used_memory_bytes": {
+          "samples": 3,
+          "first": 1613528,
+          "last": 1616264,
+          "min": 1610784,
+          "peak": 1616264,
+          "slope_per_hour": 328320
+        }
+      },
+      "postgres": {
+        "connections": {
+          "samples": 3,
+          "first": 5,
+          "last": 5,
+          "min": 5,
+          "peak": 5,
+          "slope_per_hour": 0
+        }
+      },
+      "pgbouncer": {
+        "cl_active": {
+          "samples": 3,
+          "first": 5,
+          "last": 5,
+          "min": 4,
+          "peak": 5,
+          "slope_per_hour": 0
+        },
+        "cl_waiting": {
+          "samples": 3,
+          "first": 0,
+          "last": 0,
+          "min": 0,
+          "peak": 0,
+          "slope_per_hour": 0
+        },
+        "sv_active": {
+          "samples": 3,
+          "first": 2,
+          "last": 2,
+          "min": 0,
+          "peak": 2,
+          "slope_per_hour": 0
+        },
+        "sv_idle": {
+          "samples": 3,
+          "first": 0,
+          "last": 2,
+          "min": 0,
+          "peak": 4,
+          "slope_per_hour": 240
+        },
+        "maxwait_seconds": {
+          "samples": 3,
+          "first": 0,
+          "last": 0,
+          "min": 0,
+          "peak": 0,
+          "slope_per_hour": 0
+        }
+      },
+      "app_metrics": {
+        "aghigh_metrics_series": {
+          "samples": 3,
+          "first": 119,
+          "last": 170,
+          "min": 119,
+          "peak": 170,
+          "slope_per_hour": 6120
+        }
+      },
+      "containers": {
+        "aghigh-app-1": {
+          "mem_bytes": {
+            "samples": 3,
+            "first": 231106150,
+            "last": 231420723,
+            "min": 231106150,
+            "peak": 249665945,
+            "slope_per_hour": 37748760
+          },
+          "cpu_pct": {
+            "samples": 3,
+            "first": 5.86,
+            "last": 41.47,
+            "min": 5.86,
+            "peak": 41.47,
+            "slope_per_hour": 4273.2
+          },
+          "pids": {
+            "samples": 3,
+            "first": 14,
+            "last": 14,
+            "min": 14,
+            "peak": 14,
+            "slope_per_hour": 0
+          }
+        },
+        "aghigh-horizon-1": {
+          "mem_bytes": {
+            "samples": 3,
+            "first": 510761369,
+            "last": 559834726,
+            "min": 458017996,
+            "peak": 559834726,
+            "slope_per_hour": 5888802840
+          },
+          "cpu_pct": {
+            "samples": 3,
+            "first": 0.71,
+            "last": 19.46,
+            "min": 0.71,
+            "peak": 19.46,
+            "slope_per_hour": 2250
+          },
+          "pids": {
+            "samples": 3,
+            "first": 10,
+            "last": 11,
+            "min": 9,
+            "peak": 11,
+            "slope_per_hour": 120
+          }
+        },
+        "aghigh-mailpit-1": {
+          "mem_bytes": {
+            "samples": 3,
+            "first": 23278387,
+            "last": 23309844,
+            "min": 23278387,
+            "peak": 23309844,
+            "slope_per_hour": 3774840
+          },
+          "cpu_pct": {
+            "samples": 3,
+            "first": 0.00,
+            "last": 0.00,
+            "min": 0.00,
+            "peak": 0.00,
+            "slope_per_hour": 0
+          },
+          "pids": {
+            "samples": 3,
+            "first": 12,
+            "last": 12,
+            "min": 12,
+            "peak": 12,
+            "slope_per_hour": 0
+          }
+        },
+        "aghigh-pgbouncer-1": {
+          "mem_bytes": {
+            "samples": 3,
+            "first": 11586764,
+            "last": 12111052,
+            "min": 11586764,
+            "peak": 12886999,
+            "slope_per_hour": 62914560
+          },
+          "cpu_pct": {
+            "samples": 3,
+            "first": 0.01,
+            "last": 13.24,
+            "min": 0.01,
+            "peak": 13.24,
+            "slope_per_hour": 1587.6
+          },
+          "pids": {
+            "samples": 3,
+            "first": 1,
+            "last": 1,
+            "min": 1,
+            "peak": 1,
+            "slope_per_hour": 0
+          }
+        },
+        "aghigh-postgres-1": {
+          "mem_bytes": {
+            "samples": 3,
+            "first": 299263590,
+            "last": 299053875,
+            "min": 299053875,
+            "peak": 299787878,
+            "slope_per_hour": -25165800
+          },
+          "cpu_pct": {
+            "samples": 3,
+            "first": 1.50,
+            "last": 9.06,
+            "min": 1.50,
+            "peak": 9.06,
+            "slope_per_hour": 907.2
+          },
+          "pids": {
+            "samples": 3,
+            "first": 13,
+            "last": 13,
+            "min": 13,
+            "peak": 13,
+            "slope_per_hour": 0
+          }
+        },
+        "aghigh-redis-cache-1": {
+          "mem_bytes": {
+            "samples": 3,
+            "first": 15686696,
+            "last": 14585692,
+            "min": 14564720,
+            "peak": 15686696,
+            "slope_per_hour": -132120480
+          },
+          "cpu_pct": {
+            "samples": 3,
+            "first": 3.36,
+            "last": 4.35,
+            "min": 3.36,
+            "peak": 4.35,
+            "slope_per_hour": 118.8
+          },
+          "pids": {
+            "samples": 3,
+            "first": 6,
+            "last": 6,
+            "min": 6,
+            "peak": 6,
+            "slope_per_hour": 0
+          }
+        },
+        "aghigh-redis-queue-1": {
+          "mem_bytes": {
+            "samples": 3,
+            "first": 48632954,
+            "last": 49209671,
+            "min": 48632954,
+            "peak": 49209671,
+            "slope_per_hour": 69206040
+          },
+          "cpu_pct": {
+            "samples": 3,
+            "first": 0.64,
+            "last": 11.47,
+            "min": 0.64,
+            "peak": 11.47,
+            "slope_per_hour": 1299.6
+          },
+          "pids": {
+            "samples": 3,
+            "first": 6,
+            "last": 6,
+            "min": 6,
+            "peak": 6,
+            "slope_per_hour": 0
+          }
+        },
+        "aghigh-reverb-1": {
+          "mem_bytes": {
+            "samples": 3,
+            "first": 145752064,
+            "last": 147010355,
+            "min": 145752064,
+            "peak": 147115212,
+            "slope_per_hour": 150994920
+          },
+          "cpu_pct": {
+            "samples": 3,
+            "first": 0.00,
+            "last": 5.51,
+            "min": 0.00,
+            "peak": 5.67,
+            "slope_per_hour": 661.2
+          },
+          "pids": {
+            "samples": 3,
+            "first": 1,
+            "last": 1,
+            "min": 1,
+            "peak": 1,
+            "slope_per_hour": 0
+          }
+        },
+        "aghigh-scheduler-1": {
+          "mem_bytes": {
+            "samples": 3,
+            "first": 101407784,
+            "last": 101145640,
+            "min": 100883496,
+            "peak": 101407784,
+            "slope_per_hour": -31457280
+          },
+          "cpu_pct": {
+            "samples": 3,
+            "first": 0.80,
+            "last": 0.70,
+            "min": 0.68,
+            "peak": 0.80,
+            "slope_per_hour": -12
+          },
+          "pids": {
+            "samples": 3,
+            "first": 3,
+            "last": 3,
+            "min": 3,
+            "peak": 3,
+            "slope_per_hour": 0
+          }
+        },
+        "aghigh-traefik-1": {
+          "mem_bytes": {
+            "samples": 3,
+            "first": 81998643,
+            "last": 87293952,
+            "min": 81998643,
+            "peak": 87293952,
+            "slope_per_hour": 635437080
+          },
+          "cpu_pct": {
+            "samples": 3,
+            "first": 0.00,
+            "last": 7.03,
+            "min": 0.00,
+            "peak": 7.03,
+            "slope_per_hour": 843.6
+          },
+          "pids": {
+            "samples": 3,
+            "first": 8,
+            "last": 8,
+            "min": 8,
+            "peak": 8,
+            "slope_per_hour": 0
+          }
+        }
+      },
+      "reverb": {
+        "aghigh-reverb-1": {
+          "established_sockets": {
+            "samples": 3,
+            "first": 54,
+            "last": 200,
+            "min": 54,
+            "peak": 200,
+            "slope_per_hour": 17520
+          },
+          "open_fds": {
+            "samples": 3,
+            "first": 109,
+            "last": 215,
+            "min": 109,
+            "peak": 215,
+            "slope_per_hour": 12720
+          }
+        }
+      }
+    },
+    "verdict": {
+      "passed": true,
+      "expected_violations": false,
+      "failures": [],
+      "k6_exit_code": 0
+    }
+  },
+  "notes": [
+    "Performance thresholds are PROVISIONAL (no baseline yet): a miss is recorded here but does not fail the make target.",
+    "Delivery latency = receive time minus the send time embedded in client_message_id, both read from the same k6 process clock. Broadcasts are best effort; missed deliveries are gap-filled by clients over REST."
+  ]
+}

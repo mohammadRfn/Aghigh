@@ -200,15 +200,17 @@ With two replicas, one run delivered to 5 sockets in 499 ms (2026-11-09).
 
 ## Task 10: measuring the per-replica ceiling, delivery latency and reconnect storms
 
-Status: **not measured yet** (`TODO(measure)`). Scenario: `loadtests/scenarios/websocket-chat.js`.
+Status: **first clean 3-run series (2026-11-19, commit 49e2785990a948b95fd415249b3dccd5ecc9d9f8)**; rows still marked `TODO(measure)` are unmeasured. Scenario: `loadtests/scenarios/websocket-chat.js`.
+
+Conditions: laptop with 6 cores / 12 threads / 16 GB, Windows 11 + WSL2, k6 on the same host, provisional thresholds, observability stack down, default container budgets (Traefik 0.5 CPU / 256 MiB, `OCTANE_WORKERS=2`). Raw runs and summaries: `docs/benchmarks/` (`fanout-r1`, `reconnect-jitter-r1`, `reconnect-immediate-r1`, `ceiling-r1`).
 
 | What | Value | Command | Where to read it |
 |---|---|---|---|
-| Approximate connection ceiling, one replica | `TODO(measure)` | `make k6-websocket-chat MODE=ceiling REVERB_SCALE=1 VUS=40 CONNS_PER_VU=500` | `metrics.derived.ceiling_approx_connections`, `invariants.resources.reverb.<container>.{established_sockets,open_fds}.peak` |
+| Approximate connection ceiling, one replica | Reverb x1, Traefik 0.5 CPU / 256 MiB (default), 3 runs: first failed handshake at 4203 sockets (median; min 4142, max 4349); 4546 sockets established (4150 to 4771); 54 failed handshakes (45 to 60). Sockets established before the ceiling were mostly dropped (4150 to 4370 per run); cause not investigated. Larger Traefik budgets are not part of this series | `make k6-websocket-chat MODE=ceiling REVERB_SCALE=1 VUS=40 CONNS_PER_VU=500` | `metrics.derived.ceiling_approx_connections`, `invariants.resources.reverb.<container>.{established_sockets,open_fds}.peak` |
 | Same with two replicas (observed split, not assumed even) | `TODO(measure)` | `make k6-websocket-chat MODE=ceiling REVERB_SCALE=2 VUS=40 CONNS_PER_VU=500` | same keys, one entry per replica |
-| Delivery latency p95, one replica | `TODO(measure)` | `make k6-websocket-chat MODE=fanout REVERB_SCALE=1` | `metrics.derived.delivery_p95_ms` |
+| Delivery latency p95, one replica | 50 conversations x 4 sockets (200 sockets), Reverb x1, 3 runs: delivery p95 1000 ms (median; min 966, max 1013), p50 526 ms (486 to 534), p99 1128 ms (1015 to 1153); send HTTP p95 236 ms (231 to 245); 0 missed deliveries (6000 of 6000 in every run) | `make k6-websocket-chat MODE=fanout REVERB_SCALE=1` | `metrics.derived.delivery_p95_ms` |
 | Delivery latency p95 across replicas (Redis pub/sub hop) | `TODO(measure)` | `make k6-websocket-chat MODE=fanout REVERB_SCALE=2` | `metrics.derived.delivery_p95_ms` |
-| Reconnect storm: back-off with jitter vs immediate | `TODO(measure)` | `make k6-websocket-chat MODE=reconnect` | `metrics.derived.peak_attempts_per_second`, `recover_p95_ms`, `reconnect_failed_attempts` of both variants |
+| Reconnect storm: back-off with jitter vs immediate | 500 sockets, Reverb restarted, 3 runs each (median, min to max). jitter: failed attempts 40 (36 to 1259), peak 397 attempts/s (331 to 449), recover p50 4406 ms (4307 to 7474), p95 4496 ms (4357 to 10105). immediate: failed attempts 116 (84 to 139), peak 616 attempts/s (584 to 639), recover p50 4267 ms (1340 to 4387), p95 4364 ms (1417 to 4497). All sockets recovered in every run. One jitter run was an outlier (1259 failed attempts, recover up to 20.9 s) and immediate recovery was bimodal (about 1.3 s in one run, about 4.3 s in two); causes not investigated, so the recovery-time difference between the policies is not established | `make k6-websocket-chat MODE=reconnect` | `metrics.derived.peak_attempts_per_second`, `recover_p95_ms`, `reconnect_failed_attempts` of both variants |
 
 The ceiling is **approximate**: it is the ramp position of the first failed handshake, seen from one k6 process whose
 VUs do not share state, through Traefik, with the fd limits of k6, Traefik and Reverb all in play (`K6_NOFILE`,

@@ -1,0 +1,116 @@
+{
+  "summary_schema_version": 1,
+  "generated_at": "2026-11-19T12:22:21Z",
+  "groups": [
+    {
+      "scenario": "websocket-chat",
+      "variant": "reconnect-immediate-r1",
+      "runs": 3,
+      "enough_runs": true,
+      "run_ids": [
+        "20261119T121158Z",
+        "20261119T121623Z",
+        "20261119T122048Z"
+      ],
+      "git_shas": [
+        "49e2785990a948b95fd415249b3dccd5ecc9d9f8"
+      ],
+      "any_dirty": false,
+      "observability_stack": [
+        "down"
+      ],
+      "all_verdicts_passed": true,
+      "p50": {
+        "median": null,
+        "min": null,
+        "max": null,
+        "n": 0
+      },
+      "p90": {
+        "median": null,
+        "min": null,
+        "max": null,
+        "n": 0
+      },
+      "p95": {
+        "median": null,
+        "min": null,
+        "max": null,
+        "n": 0
+      },
+      "p99": {
+        "median": null,
+        "min": null,
+        "max": null,
+        "n": 0
+      },
+      "rps": {
+        "median": null,
+        "min": null,
+        "max": null,
+        "n": 0
+      },
+      "error_rate": {
+        "median": null,
+        "min": null,
+        "max": null,
+        "n": 0
+      }
+    },
+    {
+      "scenario": "websocket-chat",
+      "variant": "reconnect-jitter-r1",
+      "runs": 3,
+      "enough_runs": true,
+      "run_ids": [
+        "20261119T121025Z",
+        "20261119T121449Z",
+        "20261119T121915Z"
+      ],
+      "git_shas": [
+        "49e2785990a948b95fd415249b3dccd5ecc9d9f8"
+      ],
+      "any_dirty": false,
+      "observability_stack": [
+        "down"
+      ],
+      "all_verdicts_passed": true,
+      "p50": {
+        "median": null,
+        "min": null,
+        "max": null,
+        "n": 0
+      },
+      "p90": {
+        "median": null,
+        "min": null,
+        "max": null,
+        "n": 0
+      },
+      "p95": {
+        "median": null,
+        "min": null,
+        "max": null,
+        "n": 0
+      },
+      "p99": {
+        "median": null,
+        "min": null,
+        "max": null,
+        "n": 0
+      },
+      "rps": {
+        "median": null,
+        "min": null,
+        "max": null,
+        "n": 0
+      },
+      "error_rate": {
+        "median": null,
+        "min": null,
+        "max": null,
+        "n": 0
+      }
+    }
+  ]
+}
