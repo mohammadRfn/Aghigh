@@ -1,0 +1,171 @@
+{
+  "summary_schema_version": 1,
+  "generated_at": "2026-11-21T13:02:23Z",
+  "groups": [
+    {
+      "scenario": "catalog",
+      "variant": "naive",
+      "runs": 3,
+      "enough_runs": true,
+      "run_ids": [
+        "20261121T124512Z",
+        "20261121T125131Z",
+        "20261121T125735Z"
+      ],
+      "git_shas": [
+        "1a28827341ef19ef2624415cf80d40a2610fc3a9"
+      ],
+      "any_dirty": false,
+      "observability_stack": [
+        "down"
+      ],
+      "all_verdicts_passed": true,
+      "p50": {
+        "median": 6680.298,
+        "min": 6620.913,
+        "max": 6687.582,
+        "n": 3
+      },
+      "p90": {
+        "median": 7083.858,
+        "min": 7037.896,
+        "max": 7258.718,
+        "n": 3
+      },
+      "p95": {
+        "median": 7205.659,
+        "min": 7112.104,
+        "max": 7343.461,
+        "n": 3
+      },
+      "p99": {
+        "median": 7350.983,
+        "min": 7223.768,
+        "max": 7477.91,
+        "n": 3
+      },
+      "rps": {
+        "median": 31.27,
+        "min": 30.9,
+        "max": 31.33,
+        "n": 3
+      },
+      "error_rate": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 3
+      }
+    },
+    {
+      "scenario": "catalog",
+      "variant": "optimized-cold",
+      "runs": 3,
+      "enough_runs": true,
+      "run_ids": [
+        "20261121T124708Z",
+        "20261121T125311Z",
+        "20261121T125915Z"
+      ],
+      "git_shas": [
+        "1a28827341ef19ef2624415cf80d40a2610fc3a9"
+      ],
+      "any_dirty": false,
+      "observability_stack": [
+        "down"
+      ],
+      "all_verdicts_passed": true,
+      "p50": {
+        "median": 6.063,
+        "min": 5.956,
+        "max": 6.183,
+        "n": 3
+      },
+      "p90": {
+        "median": 9.174,
+        "min": 8.125,
+        "max": 9.183,
+        "n": 3
+      },
+      "p95": {
+        "median": 11.402,
+        "min": 11.23,
+        "max": 11.433,
+        "n": 3
+      },
+      "p99": {
+        "median": 15.655,
+        "min": 14.729,
+        "max": 16.573,
+        "n": 3
+      },
+      "rps": {
+        "median": 40,
+        "min": 40,
+        "max": 40,
+        "n": 3
+      },
+      "error_rate": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 3
+      }
+    },
+    {
+      "scenario": "catalog",
+      "variant": "optimized-warm",
+      "runs": 3,
+      "enough_runs": true,
+      "run_ids": [
+        "20261121T124841Z",
+        "20261121T125444Z",
+        "20261121T130050Z"
+      ],
+      "git_shas": [
+        "1a28827341ef19ef2624415cf80d40a2610fc3a9"
+      ],
+      "any_dirty": false,
+      "observability_stack": [
+        "down"
+      ],
+      "all_verdicts_passed": true,
+      "p50": {
+        "median": 5.954,
+        "min": 5.896,
+        "max": 6.271,
+        "n": 3
+      },
+      "p90": {
+        "median": 7.926,
+        "min": 7.517,
+        "max": 8.083,
+        "n": 3
+      },
+      "p95": {
+        "median": 10.17,
+        "min": 9.922,
+        "max": 10.488,
+        "n": 3
+      },
+      "p99": {
+        "median": 14.03,
+        "min": 13.968,
+        "max": 14.287,
+        "n": 3
+      },
+      "rps": {
+        "median": 40,
+        "min": 40,
+        "max": 40,
+        "n": 3
+      },
+      "error_rate": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 3
+      }
+    }
+  ]
+}
