@@ -1,0 +1,116 @@
+{
+  "summary_schema_version": 1,
+  "generated_at": "2026-11-21T12:10:42Z",
+  "groups": [
+    {
+      "scenario": "metrics-overhead",
+      "variant": "metrics-off",
+      "runs": 3,
+      "enough_runs": true,
+      "run_ids": [
+        "20261121T114446Z",
+        "20261121T115357Z",
+        "20261121T120257Z"
+      ],
+      "git_shas": [
+        "bccb35e18bfa471bd2ff561a1509663c1527b8e3"
+      ],
+      "any_dirty": false,
+      "observability_stack": [
+        "down"
+      ],
+      "all_verdicts_passed": true,
+      "p50": {
+        "median": 6.563,
+        "min": 6.534,
+        "max": 6.697,
+        "n": 3
+      },
+      "p90": {
+        "median": 26.412,
+        "min": 26.166,
+        "max": 26.526,
+        "n": 3
+      },
+      "p95": {
+        "median": 29.061,
+        "min": 28.55,
+        "max": 29.58,
+        "n": 3
+      },
+      "p99": {
+        "median": 37.51,
+        "min": 33.611,
+        "max": 39.794,
+        "n": 3
+      },
+      "rps": {
+        "median": 20.01,
+        "min": 20.01,
+        "max": 20.01,
+        "n": 3
+      },
+      "error_rate": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 3
+      }
+    },
+    {
+      "scenario": "metrics-overhead",
+      "variant": "metrics-on",
+      "runs": 3,
+      "enough_runs": true,
+      "run_ids": [
+        "20261121T114841Z",
+        "20261121T115744Z",
+        "20261121T120644Z"
+      ],
+      "git_shas": [
+        "bccb35e18bfa471bd2ff561a1509663c1527b8e3"
+      ],
+      "any_dirty": false,
+      "observability_stack": [
+        "down"
+      ],
+      "all_verdicts_passed": true,
+      "p50": {
+        "median": 6.588,
+        "min": 6.514,
+        "max": 6.68,
+        "n": 3
+      },
+      "p90": {
+        "median": 26.022,
+        "min": 25.971,
+        "max": 26.772,
+        "n": 3
+      },
+      "p95": {
+        "median": 29.115,
+        "min": 28.578,
+        "max": 29.319,
+        "n": 3
+      },
+      "p99": {
+        "median": 36.943,
+        "min": 36.537,
+        "max": 37.659,
+        "n": 3
+      },
+      "rps": {
+        "median": 20.01,
+        "min": 20.01,
+        "max": 20.01,
+        "n": 3
+      },
+      "error_rate": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 3
+      }
+    }
+  ]
+}

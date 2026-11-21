@@ -1,0 +1,171 @@
+{
+  "summary_schema_version": 1,
+  "generated_at": "2026-11-21T11:31:34Z",
+  "groups": [
+    {
+      "scenario": "order-flood",
+      "variant": "atomic",
+      "runs": 3,
+      "enough_runs": true,
+      "run_ids": [
+        "20261121T111133Z",
+        "20261121T111840Z",
+        "20261121T112556Z"
+      ],
+      "git_shas": [
+        "bccb35e18bfa471bd2ff561a1509663c1527b8e3"
+      ],
+      "any_dirty": false,
+      "observability_stack": [
+        "down"
+      ],
+      "all_verdicts_passed": true,
+      "p50": {
+        "median": 913.55,
+        "min": 905.971,
+        "max": 937.403,
+        "n": 3
+      },
+      "p90": {
+        "median": 1384.784,
+        "min": 1344.548,
+        "max": 1436.508,
+        "n": 3
+      },
+      "p95": {
+        "median": 1453.843,
+        "min": 1399.702,
+        "max": 1497.044,
+        "n": 3
+      },
+      "p99": {
+        "median": 1498.622,
+        "min": 1446.516,
+        "max": 1550.422,
+        "n": 3
+      },
+      "rps": {
+        "median": 24.17,
+        "min": 23.82,
+        "max": 24.95,
+        "n": 3
+      },
+      "error_rate": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 3
+      }
+    },
+    {
+      "scenario": "order-flood",
+      "variant": "locking",
+      "runs": 3,
+      "enough_runs": true,
+      "run_ids": [
+        "20261121T111218Z",
+        "20261121T111927Z",
+        "20261121T112635Z"
+      ],
+      "git_shas": [
+        "bccb35e18bfa471bd2ff561a1509663c1527b8e3"
+      ],
+      "any_dirty": false,
+      "observability_stack": [
+        "down"
+      ],
+      "all_verdicts_passed": true,
+      "p50": {
+        "median": 949.7,
+        "min": 934.251,
+        "max": 955.821,
+        "n": 3
+      },
+      "p90": {
+        "median": 1413.17,
+        "min": 1393.501,
+        "max": 1434.949,
+        "n": 3
+      },
+      "p95": {
+        "median": 1481.929,
+        "min": 1464.791,
+        "max": 1498.546,
+        "n": 3
+      },
+      "p99": {
+        "median": 1528.814,
+        "min": 1508.939,
+        "max": 1554.145,
+        "n": 3
+      },
+      "rps": {
+        "median": 24.84,
+        "min": 22.77,
+        "max": 25.13,
+        "n": 3
+      },
+      "error_rate": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 3
+      }
+    },
+    {
+      "scenario": "order-flood",
+      "variant": "naive",
+      "runs": 3,
+      "enough_runs": true,
+      "run_ids": [
+        "20261121T111303Z",
+        "20261121T112014Z",
+        "20261121T112714Z"
+      ],
+      "git_shas": [
+        "bccb35e18bfa471bd2ff561a1509663c1527b8e3"
+      ],
+      "any_dirty": false,
+      "observability_stack": [
+        "down"
+      ],
+      "all_verdicts_passed": true,
+      "p50": {
+        "median": 11100.322,
+        "min": 3232.972,
+        "max": 11177.481,
+        "n": 3
+      },
+      "p90": {
+        "median": 11617.369,
+        "min": 4490.038,
+        "max": 12251.059,
+        "n": 3
+      },
+      "p95": {
+        "median": 11674.002,
+        "min": 4551.29,
+        "max": 12311.145,
+        "n": 3
+      },
+      "p99": {
+        "median": 11725.653,
+        "min": 4609.783,
+        "max": 12356.207,
+        "n": 3
+      },
+      "rps": {
+        "median": 10.81,
+        "min": 10.41,
+        "max": 17.8,
+        "n": 3
+      },
+      "error_rate": {
+        "median": 0.010256,
+        "min": 0,
+        "max": 0.010256,
+        "n": 3
+      }
+    }
+  ]
+}

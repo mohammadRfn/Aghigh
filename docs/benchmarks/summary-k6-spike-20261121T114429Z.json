@@ -1,0 +1,61 @@
+{
+  "summary_schema_version": 1,
+  "generated_at": "2026-11-21T11:44:29Z",
+  "groups": [
+    {
+      "scenario": "spike",
+      "variant": "default",
+      "runs": 3,
+      "enough_runs": true,
+      "run_ids": [
+        "20261121T113152Z",
+        "20261121T113638Z",
+        "20261121T114112Z"
+      ],
+      "git_shas": [
+        "bccb35e18bfa471bd2ff561a1509663c1527b8e3"
+      ],
+      "any_dirty": false,
+      "observability_stack": [
+        "down"
+      ],
+      "all_verdicts_passed": true,
+      "p50": {
+        "median": 8.102,
+        "min": 7.032,
+        "max": 8.359,
+        "n": 3
+      },
+      "p90": {
+        "median": 25.888,
+        "min": 23.924,
+        "max": 27.105,
+        "n": 3
+      },
+      "p95": {
+        "median": 28.825,
+        "min": 27.381,
+        "max": 29.513,
+        "n": 3
+      },
+      "p99": {
+        "median": 34.945,
+        "min": 31.899,
+        "max": 35.917,
+        "n": 3
+      },
+      "rps": {
+        "median": 8,
+        "min": 8,
+        "max": 8,
+        "n": 3
+      },
+      "error_rate": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 3
+      }
+    }
+  ]
+}
