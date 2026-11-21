@@ -1,5 +1,5 @@
-# Task 9 alert rules. EVERY threshold is provisional configuration (nothing here was measured): tune after the
-# Task 10 baseline. Runbooks: docs/observability.md#alerts (anchor = alert name). No Alertmanager in dev.
+# Task 9 alert rules. The HTTP p95 budget is calibrated from the Task 10 baseline; every other threshold is
+# provisional configuration (nothing else here was measured): tune after the Task 10 baseline. Runbooks: docs/observability.md#alerts (anchor = alert name). No Alertmanager in dev.
 # Keep each `expr` on ONE line: scripts/obs-query-check.php extracts them by regex for make obs-verify.
 groups:
   - name: aghigh-http
@@ -12,14 +12,14 @@ groups:
           summary: "More than 2% of HTTP requests answered 5xx over 5 minutes (provisional threshold)."
           runbook: "docs/observability.md#aghighhttp5xxratehigh"
       - alert: AghighHttpP95LatencyHigh
-        # Task 10 calibration: 0.5 s is PROVISIONAL (no baseline run exists yet). After the first baseline replace it with
-        # the budget derived from the measured soak p95, in the same commit that flips loadtests/config/thresholds.json to
-        # status=baseline (loadtests/README.md "Calibration"), then run: make obs-rules-test
-        expr: histogram_quantile(0.95, sum by (le) (rate(aghigh_http_request_duration_seconds_bucket[5m]))) > 0.5
+        # Task 10 calibration: 0.1 s = about 3 x the worst soak p95 of the baseline (33.9 ms, 3 runs, one laptop, 2026-11-21)
+        # and a bucket boundary of Catalog::HTTP_BUCKETS, so histogram_quantile does not interpolate across it. The soak
+        # budget in loadtests/config/thresholds.json is 55 ms; this alert is looser on purpose (all routes, 10 minutes).
+        expr: histogram_quantile(0.95, sum by (le) (rate(aghigh_http_request_duration_seconds_bucket[5m]))) > 0.1
         for: 10m
         labels: {severity: warning}
         annotations:
-          summary: "HTTP p95 latency above 500 ms for 10 minutes (provisional; Task 10 sets the real budget)."
+          summary: "HTTP p95 latency above 100 ms for 10 minutes (about 3 times the baseline soak p95 of 33.9 ms)."
           runbook: "docs/observability.md#aghighhttpp95latencyhigh"
       - alert: AghighMetricsWriteFailures
         expr: increase(aghigh_metrics_write_failures_total[10m]) > 0
