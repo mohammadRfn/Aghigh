@@ -1,0 +1,638 @@
+{
+  "schema_version": 1,
+  "scenario": "catalog",
+  "variant": "optimized-warm",
+  "run": {
+    "id": "20261121T130050Z",
+    "git_sha": "1a28827341ef19ef2624415cf80d40a2610fc3a9",
+    "git_dirty": false,
+    "started_at": "2026-11-21T13:00:57.968Z",
+    "finished_at": "2026-11-21T13:02:17.971Z",
+    "duration_seconds": 80,
+    "k6_version": "k6 v1.6.1 (commit/2ac2bb560e, go1.25.7, linux/amd64)",
+    "base_url": "http://traefik",
+    "params": {
+      "endpoint": "/api/v1/products",
+      "rate_per_second": 40,
+      "warmup_seconds": 20,
+      "duration_seconds": 60,
+      "per_page": 20,
+      "page_depth": 50,
+      "preallocated_vus": 50,
+      "max_vus": 200,
+      "catalog_products": 100000,
+      "cache": "warm",
+      "leaf_categories": 180,
+      "price_max_minor": 9999251,
+      "price_min_minor": 50007,
+      "query_count": 14
+    },
+    "env": {
+      "APP_ENV": "loadtest",
+      "APP_DEBUG": "false",
+      "LOG_LEVEL": "warning",
+      "STOCK_STRATEGY": "atomic",
+      "STOCK_NAIVE_DELAY_MS": "0",
+      "METRICS_ENABLED": "true",
+      "RATE_LIMIT_MULTIPLIER": "100",
+      "REVERB_SCALE": "1",
+      "SENTRY_TRACES_SAMPLE_RATE": "0.0",
+      "SENTRY_DSN_SET": "true",
+      "observability_stack": "down"
+    }
+  },
+  "host": {
+    "collected_at": "2026-11-21T13:02:23Z",
+    "cpu": {
+      "model": "Intel(R) Core(TM) i7-10750H CPU @ 2.60GHz",
+      "logical_cpus": 12
+    },
+    "memory_total_bytes": 8257286144,
+    "os": "Ubuntu 26.04.1 LTS",
+    "kernel": "Linux 6.18.58.1-microsoft-standard-WSL2",
+    "wsl2": true,
+    "wslconfig": {
+      "path": "not found: no .wslconfig means WSL defaults (50% of host RAM, all cores). Set WSLCONFIG_PATH if it lives elsewhere."
+    },
+    "power_source": "ac",
+    "host_ulimit_nofile": "10240",
+    "docker": {
+      "client_version": "29.1.3",
+      "server_version": "29.1.3",
+      "compose_version": "2.40.3",
+      "context": "default",
+      "engine": {
+        "operating_system": "Ubuntu 26.04.1 LTS",
+        "name": "MohammadRaufian",
+        "cpus": 12,
+        "memory_bytes": 8257286144,
+        "storage_driver": "overlayfs"
+      }
+    },
+    "compose_limits": {
+      "app": {
+        "cpus": 2,
+        "mem_limit": "3221225472"
+      },
+      "horizon": {
+        "cpus": 1.5,
+        "mem_limit": "1342177280"
+      },
+      "mailpit": {
+        "cpus": 0.25,
+        "mem_limit": "134217728"
+      },
+      "pgbouncer": {
+        "cpus": 0.5,
+        "mem_limit": "134217728"
+      },
+      "postgres": {
+        "cpus": 2,
+        "mem_limit": "1073741824"
+      },
+      "redis-cache": {
+        "cpus": 0.5,
+        "mem_limit": "402653184"
+      },
+      "redis-queue": {
+        "cpus": 0.5,
+        "mem_limit": "402653184"
+      },
+      "reverb": {
+        "cpus": 1,
+        "mem_limit": "536870912"
+      },
+      "scheduler": {
+        "cpus": 1,
+        "mem_limit": "536870912"
+      },
+      "traefik": {
+        "cpus": 0.5,
+        "mem_limit": "268435456"
+      }
+    },
+    "versions": {
+      "php": "8.5.12",
+      "laravel": "Laravel Framework 13.42.0",
+      "octane_workers": 2,
+      "postgres": "18.7(Debian18.7-1.pgdg13+2)",
+      "redis_queue": "8.10.3",
+      "redis_cache": "8.10.3",
+      "pgbouncer": "PgBouncer 1.26.1",
+      "reverb_replicas": 1
+    }
+  },
+  "metrics": {
+    "p50": 5.954,
+    "p90": 7.926,
+    "p95": 10.488,
+    "p99": 13.968,
+    "rps": 40,
+    "error_rate": 0,
+    "unit": "ms",
+    "http": {
+      "scope": "phase:main",
+      "p50": 5.954,
+      "p90": 7.926,
+      "p95": 10.488,
+      "p99": 13.968,
+      "avg": 6.473,
+      "min": 4.624,
+      "max": 39.687,
+      "requests": 2400,
+      "rps": 40,
+      "rps_basis": "requests / configured phase length (60s)",
+      "error_rate": 0
+    },
+    "phases": {
+      "main": {
+        "scope": "phase:main",
+        "p50": 5.954,
+        "p90": 7.926,
+        "p95": 10.488,
+        "p99": 13.968,
+        "avg": 6.473,
+        "min": 4.624,
+        "max": 39.687,
+        "requests": 2400,
+        "rps": 40,
+        "rps_basis": "requests / configured phase length (60s)",
+        "error_rate": 0
+      },
+      "warmup": {
+        "scope": "phase:warmup",
+        "p50": 6.148,
+        "p90": 10.681,
+        "p95": 12.862,
+        "p99": 19.071,
+        "avg": 7.062,
+        "min": 4.734,
+        "max": 21.838,
+        "requests": 439,
+        "rps": 21.95,
+        "rps_basis": "requests / configured phase length (20s)",
+        "error_rate": 0
+      }
+    },
+    "iterations": {
+      "count": 2839,
+      "rate": 35.47,
+      "dropped": 0
+    },
+    "counters": {
+      "lt_http_5xx": 0
+    },
+    "rates": {
+      "lt_unexpected_response": {
+        "rate": 0,
+        "passes": 0,
+        "fails": 2839
+      }
+    },
+    "trends": {},
+    "gauges": {},
+    "derived": {}
+  },
+  "thresholds": [
+    {
+      "metric": "http_req_duration{phase:main}",
+      "expression": "p(95)<500",
+      "kind": "performance",
+      "value": 10.488175,
+      "passed": true,
+      "provisional": true,
+      "status": "provisional",
+      "baseline_date": null,
+      "baseline_commit": null
+    },
+    {
+      "metric": "http_req_failed{phase:main}",
+      "expression": "rate<0.01",
+      "kind": "performance",
+      "value": 0,
+      "passed": true,
+      "provisional": true,
+      "status": "provisional",
+      "baseline_date": null,
+      "baseline_commit": null
+    },
+    {
+      "metric": "lt_http_5xx",
+      "expression": "count==0",
+      "kind": "assertion",
+      "value": 0,
+      "passed": true,
+      "provisional": false,
+      "status": "assertion",
+      "baseline_date": null,
+      "baseline_commit": null
+    }
+  ],
+  "checks": [
+    {
+      "name": "list is 200",
+      "group": "",
+      "passes": 2839,
+      "fails": 0,
+      "rate": 1
+    },
+    {
+      "name": "list has data[]",
+      "group": "",
+      "passes": 2839,
+      "fails": 0,
+      "rate": 1
+    }
+  ],
+  "invariants": {
+    "orders": {
+      "ok": true,
+      "orders_checked": 0,
+      "violation_count": 0,
+      "violations": []
+    },
+    "app_metrics": {
+      "snapshot_file": "catalog-optimized-warm-20261121T130050Z.metrics.prom",
+      "sample_lines": 192,
+      "aghigh_metrics_series": 169
+    },
+    "resources": {
+      "sampler_file": "catalog-optimized-warm-20261121T130050Z.samples.ndjson",
+      "samples": 6,
+      "window_seconds": 72,
+      "note": "slope_per_hour = least squares over the whole sampler window; null below 3 samples. Units: bytes, connections, percent.",
+      "redis": {
+        "queue_used_memory_bytes": {
+          "samples": 6,
+          "first": 21621600,
+          "last": 19707872,
+          "min": 19707872,
+          "peak": 21621600,
+          "slope_per_hour": -101991129.58
+        },
+        "cache_used_memory_bytes": {
+          "samples": 6,
+          "first": 2728576,
+          "last": 2835560,
+          "min": 2700936,
+          "peak": 2835560,
+          "slope_per_hour": 3306551.78
+        }
+      },
+      "postgres": {
+        "connections": {
+          "samples": 6,
+          "first": 4,
+          "last": 4,
+          "min": 4,
+          "peak": 4,
+          "slope_per_hour": 0
+        }
+      },
+      "pgbouncer": {
+        "cl_active": {
+          "samples": 6,
+          "first": 3,
+          "last": 4,
+          "min": 2,
+          "peak": 4,
+          "slope_per_hour": -0.98
+        },
+        "cl_waiting": {
+          "samples": 6,
+          "first": 0,
+          "last": 0,
+          "min": 0,
+          "peak": 0,
+          "slope_per_hour": 0
+        },
+        "sv_active": {
+          "samples": 6,
+          "first": 0,
+          "last": 0,
+          "min": 0,
+          "peak": 0,
+          "slope_per_hour": 0
+        },
+        "sv_idle": {
+          "samples": 6,
+          "first": 1,
+          "last": 1,
+          "min": 1,
+          "peak": 1,
+          "slope_per_hour": 0
+        },
+        "maxwait_seconds": {
+          "samples": 6,
+          "first": 0,
+          "last": 0,
+          "min": 0,
+          "peak": 0,
+          "slope_per_hour": 0
+        }
+      },
+      "app_metrics": {
+        "aghigh_metrics_series": {
+          "samples": 6,
+          "first": 169,
+          "last": 169,
+          "min": 169,
+          "peak": 169,
+          "slope_per_hour": 0
+        }
+      },
+      "containers": {
+        "aghigh-app-1": {
+          "mem_bytes": {
+            "samples": 6,
+            "first": 140823756,
+            "last": 136839168,
+            "min": 136839168,
+            "peak": 140823756,
+            "slope_per_hour": -153347750.36
+          },
+          "cpu_pct": {
+            "samples": 6,
+            "first": 1.58,
+            "last": 22.18,
+            "min": 1.58,
+            "peak": 23.62,
+            "slope_per_hour": 761.76
+          },
+          "pids": {
+            "samples": 6,
+            "first": 14,
+            "last": 14,
+            "min": 14,
+            "peak": 14,
+            "slope_per_hour": 0
+          }
+        },
+        "aghigh-horizon-1": {
+          "mem_bytes": {
+            "samples": 6,
+            "first": 448266240,
+            "last": 448685670,
+            "min": 447532236,
+            "peak": 501009612,
+            "slope_per_hour": 333010317.77
+          },
+          "cpu_pct": {
+            "samples": 6,
+            "first": 1.09,
+            "last": 0.49,
+            "min": 0.37,
+            "peak": 24.17,
+            "slope_per_hour": 57.61
+          },
+          "pids": {
+            "samples": 6,
+            "first": 9,
+            "last": 9,
+            "min": 9,
+            "peak": 10,
+            "slope_per_hour": 0
+          }
+        },
+        "aghigh-mailpit-1": {
+          "mem_bytes": {
+            "samples": 6,
+            "first": 32862371,
+            "last": 32862371,
+            "min": 32862371,
+            "peak": 33334231,
+            "slope_per_hour": 10216323.67
+          },
+          "cpu_pct": {
+            "samples": 6,
+            "first": 0.00,
+            "last": 0.00,
+            "min": 0.00,
+            "peak": 0.00,
+            "slope_per_hour": 0
+          },
+          "pids": {
+            "samples": 6,
+            "first": 14,
+            "last": 14,
+            "min": 14,
+            "peak": 14,
+            "slope_per_hour": 0
+          }
+        },
+        "aghigh-pgbouncer-1": {
+          "mem_bytes": {
+            "samples": 6,
+            "first": 11230248,
+            "last": 11251220,
+            "min": 11230248,
+            "peak": 11754536,
+            "slope_per_hour": 4354846.58
+          },
+          "cpu_pct": {
+            "samples": 6,
+            "first": 0.02,
+            "last": 0.01,
+            "min": 0.01,
+            "peak": 0.14,
+            "slope_per_hour": 0.47
+          },
+          "pids": {
+            "samples": 6,
+            "first": 1,
+            "last": 1,
+            "min": 1,
+            "peak": 1,
+            "slope_per_hour": 0
+          }
+        },
+        "aghigh-postgres-1": {
+          "mem_bytes": {
+            "samples": 6,
+            "first": 383883673,
+            "last": 383464243,
+            "min": 383464243,
+            "peak": 383883673,
+            "slope_per_hour": -19297441.77
+          },
+          "cpu_pct": {
+            "samples": 6,
+            "first": 0.25,
+            "last": 0.14,
+            "min": 0.08,
+            "peak": 5.30,
+            "slope_per_hour": -39.41
+          },
+          "pids": {
+            "samples": 6,
+            "first": 12,
+            "last": 12,
+            "min": 12,
+            "peak": 12,
+            "slope_per_hour": 0
+          }
+        },
+        "aghigh-redis-cache-1": {
+          "mem_bytes": {
+            "samples": 6,
+            "first": 9293529,
+            "last": 9039773,
+            "min": 8564768,
+            "peak": 9293529,
+            "slope_per_hour": -15417336.58
+          },
+          "cpu_pct": {
+            "samples": 6,
+            "first": 3.75,
+            "last": 0.98,
+            "min": 0.88,
+            "peak": 3.75,
+            "slope_per_hour": -100.57
+          },
+          "pids": {
+            "samples": 6,
+            "first": 6,
+            "last": 6,
+            "min": 6,
+            "peak": 6,
+            "slope_per_hour": 0
+          }
+        },
+        "aghigh-redis-queue-1": {
+          "mem_bytes": {
+            "samples": 6,
+            "first": 58248396,
+            "last": 56465817,
+            "min": 56465817,
+            "peak": 58248396,
+            "slope_per_hour": -82906864.3
+          },
+          "cpu_pct": {
+            "samples": 6,
+            "first": 0.91,
+            "last": 3.66,
+            "min": 0.91,
+            "peak": 4.02,
+            "slope_per_hour": 108.95
+          },
+          "pids": {
+            "samples": 6,
+            "first": 6,
+            "last": 6,
+            "min": 6,
+            "peak": 6,
+            "slope_per_hour": 0
+          }
+        },
+        "aghigh-reverb-1": {
+          "mem_bytes": {
+            "samples": 6,
+            "first": 53099888,
+            "last": 53362032,
+            "min": 53099888,
+            "peak": 53362032,
+            "slope_per_hour": 14963276.98
+          },
+          "cpu_pct": {
+            "samples": 6,
+            "first": 0.00,
+            "last": 0.04,
+            "min": 0.00,
+            "peak": 0.04,
+            "slope_per_hour": 1.77
+          },
+          "pids": {
+            "samples": 6,
+            "first": 1,
+            "last": 1,
+            "min": 1,
+            "peak": 1,
+            "slope_per_hour": 0
+          }
+        },
+        "aghigh-scheduler-1": {
+          "mem_bytes": {
+            "samples": 6,
+            "first": 100914954,
+            "last": 100925440,
+            "min": 100663296,
+            "peak": 101449728,
+            "slope_per_hour": -3240314.93
+          },
+          "cpu_pct": {
+            "samples": 6,
+            "first": 1.05,
+            "last": 0.63,
+            "min": 0.49,
+            "peak": 1.05,
+            "slope_per_hour": -22.75
+          },
+          "pids": {
+            "samples": 6,
+            "first": 3,
+            "last": 3,
+            "min": 3,
+            "peak": 3,
+            "slope_per_hour": 0
+          }
+        },
+        "aghigh-traefik-1": {
+          "mem_bytes": {
+            "samples": 6,
+            "first": 158125260,
+            "last": 125095116,
+            "min": 125095116,
+            "peak": 158125260,
+            "slope_per_hour": -1302733838.38
+          },
+          "cpu_pct": {
+            "samples": 6,
+            "first": 6.00,
+            "last": 4.69,
+            "min": 3.54,
+            "peak": 6.00,
+            "slope_per_hour": -4.27
+          },
+          "pids": {
+            "samples": 6,
+            "first": 8,
+            "last": 8,
+            "min": 8,
+            "peak": 8,
+            "slope_per_hour": 0
+          }
+        }
+      },
+      "reverb": {
+        "aghigh-reverb-1": {
+          "established_sockets": {
+            "samples": 6,
+            "first": 0,
+            "last": 0,
+            "min": 0,
+            "peak": 0,
+            "slope_per_hour": 0
+          },
+          "open_fds": {
+            "samples": 6,
+            "first": 15,
+            "last": 15,
+            "min": 15,
+            "peak": 15,
+            "slope_per_hour": 0
+          }
+        }
+      }
+    },
+    "verdict": {
+      "passed": true,
+      "expected_violations": false,
+      "failures": [],
+      "k6_exit_code": 0
+    }
+  },
+  "notes": [
+    "Compare naive vs optimized only between runs made back to back on the same machine (loadtests/README.md).",
+    "Performance thresholds are PROVISIONAL (no baseline yet): a miss is recorded here but does not fail the make target."
+  ]
+}
