@@ -1,7 +1,7 @@
 # Capacity hand-off to Task 11 (production compose and sizing)
 
 Task 11 sizes limits, pools and grace periods. These are the measurements it needs, where each one comes from, and
-the exact command that produces it. **Nothing has been measured yet: every value is `TODO(measure)`.** Fill a cell
+the exact command that produces it. **Rows 1 to 8 and 10 to 13 are filled from the baseline files in this directory (one laptop, 2026-11-19 to 2026-11-21); row 9 needs the `.metrics.prom` snapshot, which is not copied here, so it stays `TODO(measure)`. The sampler runs every 10 s (soak 30 s), so a peak shorter than that can be missed.** Fill a cell
 only from a result file that was copied to `docs/benchmarks/` (see `README.md` there) and name that file.
 
 All peaks come from the resource sampler (`loadtests/scripts/sampler.sh`), aggregated by `after-run.sh` into
@@ -11,19 +11,19 @@ Use the runs with the heaviest relevant load: `spike` for bursts, `soak` for ste
 
 | # | Measurement | Value | Source in the result file | Command |
 |---|---|---|---|---|
-| 1 | Peak Redis `used_memory`, redis-queue (queues, Horizon, state, metrics) | `TODO(measure)` | `invariants.resources.redis.queue_used_memory_bytes.peak` | `make k6-spike` and `make k6-soak DURATION=2h` (take the larger) |
-| 2 | Peak Redis `used_memory`, redis-cache | `TODO(measure)` | `invariants.resources.redis.cache_used_memory_bytes.peak` | `make k6-catalog VARIANT=optimized-warm`, `make k6-soak DURATION=2h` |
-| 3 | Redis memory growth over time (leak signal) | `TODO(measure)` | `...queue_used_memory_bytes.slope_per_hour`, `...cache_used_memory_bytes.slope_per_hour` | `make k6-soak DURATION=2h` |
-| 4 | PgBouncer pool in use at peak (`sv_active`, against `PGBOUNCER_POOL_SIZE`) | `TODO(measure)` | `invariants.resources.pgbouncer.sv_active.peak` | `make k6-spike` |
-| 5 | PgBouncer clients waiting for a server connection (`cl_waiting`) and longest wait | `TODO(measure)` | `invariants.resources.pgbouncer.cl_waiting.peak`, `...maxwait_seconds.peak` | `make k6-spike` |
-| 6 | Postgres connections at peak (against `max_connections`) | `TODO(measure)` | `invariants.resources.postgres.connections.peak` | `make k6-spike`, `make k6-order-flood STRATEGY=locking` |
-| 7 | Reverb connections per replica at the approximate ceiling | `TODO(measure)` | `invariants.resources.reverb.<container>.established_sockets.peak`, `metrics.derived.ceiling_approx_connections` | `make k6-websocket-chat MODE=ceiling REVERB_SCALE=1` and `REVERB_SCALE=2` |
-| 8 | Reverb open file descriptors per replica (against `nofile`) | `TODO(measure)` | `invariants.resources.reverb.<container>.open_fds.peak` | same runs as 7 |
+| 1 | Peak Redis `used_memory`, redis-queue (queues, Horizon, state, metrics) | peak 29.6 MiB. spike 15.5 / 22.4 / 29.1 MiB, soak 18.1 / 29.6 / 29.4 MiB (3 runs each, `spike-default-*.json`, `soak-default-*.json`) | `invariants.resources.redis.queue_used_memory_bytes.peak` | `make k6-spike` and `make k6-soak DURATION=2h` (take the larger) |
+| 2 | Peak Redis `used_memory`, redis-cache | peak 2.7 MiB. catalog optimized-warm 2.7 / 2.7 / 2.7 MiB, soak 1.8 / 1.8 / 1.8 MiB (`catalog-optimized-warm-*.json`, `soak-default-*.json`) | `invariants.resources.redis.cache_used_memory_bytes.peak` | `make k6-catalog VARIANT=optimized-warm`, `make k6-soak DURATION=2h` |
+| 3 | Redis memory growth over time (leak signal) | 31-minute soak, 3 runs. redis-queue 27.5 / 27.0 / 4.5 MiB/h (high in runs 1 and 2, lower in run 3; peaks 18.1 / 29.6 / 29.4 MiB, runs 2 and 3 peak at about the same value; cause not established), redis-cache -0.02 / -0.01 / 0.00 MiB/h. The 2 h run (`DURATION=2h`) was not done | `...queue_used_memory_bytes.slope_per_hour`, `...cache_used_memory_bytes.slope_per_hour` | `make k6-soak DURATION=2h` |
+| 4 | PgBouncer pool in use at peak (`sv_active`, against `PGBOUNCER_POOL_SIZE`) | peak 3 / 2 / 2 server connections in use, against `PGBOUNCER_POOL_SIZE=20` (spike, 3 runs) | `invariants.resources.pgbouncer.sv_active.peak` | `make k6-spike` |
+| 5 | PgBouncer clients waiting for a server connection (`cl_waiting`) and longest wait | cl_waiting peak 0 / 0 / 0, longest wait 0 / 0 / 0 s (spike, 3 runs): no client waited for a server connection | `invariants.resources.pgbouncer.cl_waiting.peak`, `...maxwait_seconds.peak` | `make k6-spike` |
+| 6 | Postgres connections at peak (against `max_connections`) | peak 9 / 9 / 9 during the spike, 4 / 5 / 4 during order-flood/locking (3 runs each); `max_connections` not read in this series | `invariants.resources.postgres.connections.peak` | `make k6-spike`, `make k6-order-flood STRATEGY=locking` |
+| 7 | Reverb connections per replica at the approximate ceiling | one replica (`ceiling-r1`), default Traefik budget (0.5 CPU / 256 MiB): approximate ceiling 4203 / 4142 / 4349 sockets (first failed handshake). The sampler (10 s interval) saw at most 2909 / 2945 / 4309 established sockets in the reverb container, below the ceiling because a peak shorter than the interval can be missed. Two replicas not measured | `invariants.resources.reverb.<container>.established_sockets.peak`, `metrics.derived.ceiling_approx_connections` | `make k6-websocket-chat MODE=ceiling REVERB_SCALE=1` and `REVERB_SCALE=2` |
+| 8 | Reverb open file descriptors per replica (against `nofile`) | peak open fds in the reverb container 2940 / 2961 / 4343 in the same 3 ceiling runs, one replica; the `nofile` limit is not read in this series | `invariants.resources.reverb.<container>.open_fds.peak` | same runs as 7 |
 | 9 | Longest job runtime p99 (basis for Horizon `stop_grace_period`) | `TODO(measure)` | `<run>.metrics.prom`: `histogram_quantile(0.99, ...)` over the job runtime histogram, per job class (see below) | `make k6-spike`, then read the snapshot |
-| 10 | `queue:drain-time` after the spike | `TODO(measure)` | `invariants.queues.elapsed_seconds`, `invariants.queues.failed_jobs` | `make k6-spike` |
-| 11 | Worker memory: Horizon container RSS at peak | `TODO(measure)` | `invariants.resources.containers.<horizon container>.mem_bytes.peak` | `make k6-spike`, `make k6-soak DURATION=2h` |
-| 12 | App (Octane) container memory at peak and its slope | `TODO(measure)` | `invariants.resources.containers.<app container>.mem_bytes.{peak,slope_per_hour}` | `make k6-soak DURATION=2h` |
-| 13 | Metrics keyspace: series count and Redis memory of the metrics db | `TODO(measure)` | `invariants.app_metrics.aghigh_metrics_series`, `metrics_redis_memory_bytes` | `make k6-metrics-overhead METRICS=metrics-on` |
+| 10 | `queue:drain-time` after the spike | queue empty when measured: drain 0.005 / 0.006 / 0.005 s, measurement started 0.0 / 0.0 / 0.0 s after k6 ended; failed jobs 12 / 18 / 12 (spike, 3 runs; their cause is not classified) | `invariants.queues.elapsed_seconds`, `invariants.queues.failed_jobs` | `make k6-spike` |
+| 11 | Worker memory: Horizon container RSS at peak | peak 693.2 MiB. spike 646.2 / 645.6 / 693.2 MiB, soak 638.7 / 643.0 / 538.4 MiB (container memory from `docker stats`, not RSS per worker); compare with `HORIZON_MEM_LIMIT` before sizing | `invariants.resources.containers.<horizon container>.mem_bytes.peak` | `make k6-spike`, `make k6-soak DURATION=2h` |
+| 12 | App (Octane) container memory at peak and its slope | app container peak 189.2 / 190.5 / 210.2 MiB; slope +10.3 / -1.6 / +2.6 MiB/h over 31 minutes (the sign changes between runs: no trend established) | `invariants.resources.containers.<app container>.mem_bytes.{peak,slope_per_hour}` | `make k6-soak DURATION=2h` |
+| 13 | Metrics keyspace: series count and Redis memory of the metrics db | 367 / 367 / 367 series, 15972 to 16479 bytes in 9 / 9 / 9 keys (`metrics-on`, 3 runs) | `invariants.app_metrics.aghigh_metrics_series`, `metrics_redis_memory_bytes` | `make k6-metrics-overhead METRICS=metrics-on` |
 
 ## Notes for whoever fills this in
 

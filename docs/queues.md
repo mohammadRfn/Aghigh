@@ -108,17 +108,17 @@ For job entries the scheduler mutex only covers the push; `ShouldBeUnique` + the
 
 ## Task 10: measuring Horizon memory, CPU and drain time
 
-Status: **not measured yet** (`TODO(measure)`). The load tests record these through the resource sampler
+Status: **partly measured** (spike runs, 2026-11-21; rows still `TODO(measure)` need runs that were not done). The load tests record these through the resource sampler
 (`loadtests/scripts/sampler.sh`); the values land in `invariants.resources` and `invariants.queues` of each result.
 
 | What | Value | Command | Where to read it |
 |---|---|---|---|
-| Horizon container memory at peak (all workers together, `docker stats`) | `TODO(measure)` | `make k6-spike` | `invariants.resources.containers.<horizon container>.mem_bytes.peak` |
+| Horizon container memory at peak (all workers together, `docker stats`) | peak 693.2 MiB. spike 646.2 / 645.6 / 693.2 MiB, soak 638.7 / 643.0 / 538.4 MiB (container memory from `docker stats`, not RSS per worker); compare with `HORIZON_MEM_LIMIT` before sizing | `make k6-spike` | `invariants.resources.containers.<horizon container>.mem_bytes.peak` |
 | Horizon container memory growth over time | `TODO(measure)` | `make k6-soak DURATION=2h` | `...mem_bytes.slope_per_hour` |
-| Horizon CPU at peak (percent of one core, `docker stats`) | `TODO(measure)` | `make k6-spike` | `invariants.resources.containers.<horizon container>.cpu_pct.peak` |
-| Time for the queues to drain after a 10x spike | `TODO(measure)` | `make k6-spike` | `invariants.queues.elapsed_seconds` |
-| Failed jobs after the spike | `TODO(measure)` | `make k6-spike` | `invariants.queues.failed_jobs` |
-| PgBouncer clients waiting at peak | `TODO(measure)` | `make k6-spike` | `invariants.resources.pgbouncer.cl_waiting.peak` |
+| Horizon CPU at peak (percent of one core, `docker stats`) | peak 63 / 59 / 90 % of one core (spike, 3 runs) | `make k6-spike` | `invariants.resources.containers.<horizon container>.cpu_pct.peak` |
+| Time for the queues to drain after a 10x spike | queue empty when measured: drain 0.005 / 0.006 / 0.005 s, measurement started 0.0 / 0.0 / 0.0 s after k6 ended; failed jobs 12 / 18 / 12 (spike, 3 runs; their cause is not classified) | `make k6-spike` | `invariants.queues.elapsed_seconds` |
+| Failed jobs after the spike | 12 / 18 / 12 (spike, 3 runs; cause not classified) | `make k6-spike` | `invariants.queues.failed_jobs` |
+| PgBouncer clients waiting at peak | cl_waiting peak 0 / 0 / 0, longest wait 0 / 0 / 0 s (spike, 3 runs): no client waited for a server connection | `make k6-spike` | `invariants.resources.pgbouncer.cl_waiting.peak` |
 
 `mem_bytes` is the container total, not RSS per worker: divide by the worker count only as an estimate. If the peak
 sits at `HORIZON_MEM_LIMIT` the limit set the number; raise it and measure again before tightening
