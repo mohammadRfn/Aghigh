@@ -3,7 +3,7 @@
 This directory holds the **curated** load-test results that the README and `bench-report.php` (Task 12) are built
 from. Nothing here is generated: a file is here because someone ran the scenario, looked at it and copied it.
 
-**Status: no benchmark has been run yet. Every number that would go here is `TODO(measure)`.**
+**Status: baselines were recorded between 2026-11-19 and 2026-11-21 (7 scenarios, 3 runs each, one laptop); the files are in this directory. `TODO(measure)` marks what is still unmeasured.**
 Do not write a number into any document that is not in one of the files in this directory.
 
 ## Which files to copy
