@@ -5,13 +5,16 @@ every number), with one result schema, invariant checks after every run and no i
 
 ## Status: what has and has not been run
 
-**No benchmark has been run. There is no baseline. Every threshold is `provisional`, every measurement is
-`TODO(measure)`.**
+**Baselines were recorded for all seven scenarios between 2026-11-19 and 2026-11-21 on one laptop (6 cores / 12 threads,
+Windows 11 + WSL2, k6 on the same host): 3 runs each, raw files and summaries in `docs/benchmarks/`. Thresholds are
+`baseline` (p95 budget = 1.5 x the worst recorded p95, rounded up; see `config/thresholds.json`). These are numbers for
+this host at the default loads, not capacity claims: no scenario was driven to failure except the WebSocket ceiling.
+Remaining `TODO(measure)` items are listed in the docs that own them.**
 
 | Part | Status |
 |---|---|
-| k6 scripts (`scenarios/*.js`, `lib/*.js`) | Parsed with `k6 inspect` and executed with the pinned k6 v1.6.1 against a **mock** HTTP + Pusher server written from the route files and docs. Proves the script logic (tags, thresholds, summary schema, token refresh, replay accounting, WebSocket flows). **UNTESTED against the real app** |
-| `scripts/*.sh`, Makefile targets | `bash -n`, and executed end to end against a `docker` **shim** with canned answers (verdict paths, guards, JSON merging). **UNTESTED against real Docker**: compose overlay merge, `docker stats` format, `psql` to PgBouncer, `redis-cli`, Horizon commands, `--wait` |
+| k6 scripts (`scenarios/*.js`, `lib/*.js`) | Parsed with `k6 inspect` and executed with the pinned k6 v1.6.1 against a **mock** HTTP + Pusher server written from the route files and docs. Proves the script logic. Since 2026-11-19 also executed against the real stack for all seven scenarios (results in `docs/benchmarks/`) |
+| `scripts/*.sh`, Makefile targets | `bash -n`, and executed end to end against a `docker` **shim** with canned answers (verdict paths, guards, JSON merging). Executed end to end against the real Docker stack in the baseline runs (compose overlay, `docker stats` sampling, PgBouncer, Redis, Horizon commands). **Not yet exercised:** `make k6-image-fallback` |
 | `php artisan loadtest:seed-users` and the four new test files | **UNTESTED** (written without a PHP runtime; not even linted). Run `make lint stan test` first |
 | `compose.loadtest.yaml`, k6 `user:`/`ulimits`/results mount, `HTTP_BIND`, k6 image fallback (`docker import`) | **UNTESTED**. Check with `make loadtest-config` and `make k6-image-check` |
 | Loki query for security events | **UNTESTED** (the recorded count comes from the log files) |

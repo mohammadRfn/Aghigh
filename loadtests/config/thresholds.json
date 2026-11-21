@@ -7,18 +7,19 @@
     "Provisional error-rate budget = 1% (loadtests/smoke.js).",
     "After a baseline: set status to baseline, fill baseline.date (UTC, YYYY-MM-DD) and baseline.commit (git SHA of the",
     "run), and replace the numbers with ones derived from the 3-run median. See loadtests/README.md \"Calibration\".",
-    "`assertions` are correctness conditions, not budgets: they are always enforced and never calibrated."
+    "`assertions` are correctness conditions, not budgets: they are always enforced and never calibrated.",
+    "Baseline budgets: p95 = 1.5 x the worst p95 of the recorded runs, rounded up (5 ms below 100, 50 ms below 1000, 500 ms above). Error-rate budgets stay at 1% (observed 0) except the naive variants. All numbers are for one laptop (6 cores / 12 threads, Windows 11 + WSL2, k6 on the same host) at the default loads in docs/benchmarks/; they are not capacity claims."
   ],
   "scenarios": {
     "catalog": {
-      "status": "provisional",
+      "status": "baseline",
       "baseline": {
-        "date": null,
-        "commit": null
+        "date": "2026-11-21",
+        "commit": "1a28827341ef19ef2624415cf80d40a2610fc3a9"
       },
       "thresholds": {
         "http_req_duration{phase:main}": [
-          "p(95)<500"
+          "p(95)<20"
         ],
         "http_req_failed{phase:main}": [
           "rate<0.01"
@@ -31,24 +32,29 @@
       },
       "variants": {
         "naive": {
-          "status": "provisional",
+          "status": "baseline",
           "baseline": {
-            "date": null,
-            "commit": null
+            "date": "2026-11-21",
+            "commit": "1a28827341ef19ef2624415cf80d40a2610fc3a9"
           },
-          "_note": "The naive endpoint is expected to be slower; its budget stays the same provisional number until measured so the result shows by how much it misses."
+          "_note": "The naive endpoint is slower by design. Its budget is a loose regression guard (1.5 x worst p95), not a target; at the recorded load it saturates the 200-VU cap, so its rps is below the 40/s arrival rate.",
+          "thresholds": {
+            "http_req_duration{phase:main}": [
+              "p(95)<11500"
+            ]
+          }
         }
       }
     },
     "order-flood": {
-      "status": "provisional",
+      "status": "baseline",
       "baseline": {
-        "date": null,
-        "commit": null
+        "date": "2026-11-21",
+        "commit": "bccb35e18bfa471bd2ff561a1509663c1527b8e3"
       },
       "thresholds": {
         "http_req_duration{phase:main}": [
-          "p(95)<500"
+          "p(95)<2500"
         ],
         "lt_unexpected_response{phase:main}": [
           "rate<0.01"
@@ -73,23 +79,31 @@
       },
       "variants": {
         "naive": {
-          "_note": "Expected to oversell. Nothing is asserted from k6: after-run.sh --expect-violations asserts violation_count > 0.",
-          "assertions": {}
+          "_note": "Expected to oversell. Nothing is asserted from k6: after-run.sh --expect-violations asserts violation_count > 0. Its latency varies a lot between runs, so its p95 and unexpected-response budgets are loose guards.",
+          "assertions": {},
+          "thresholds": {
+            "http_req_duration{phase:main}": [
+              "p(95)<18500"
+            ],
+            "lt_unexpected_response{phase:main}": [
+              "rate<0.02"
+            ]
+          }
         }
       }
     },
     "spike": {
-      "status": "provisional",
+      "status": "baseline",
       "baseline": {
-        "date": null,
-        "commit": null
+        "date": "2026-11-21",
+        "commit": "bccb35e18bfa471bd2ff561a1509663c1527b8e3"
       },
       "thresholds": {
         "http_req_duration{phase:baseline}": [
-          "p(95)<500"
+          "p(95)<45"
         ],
         "http_req_duration{phase:recovery}": [
-          "p(95)<500"
+          "p(95)<50"
         ],
         "lt_unexpected_response{phase:baseline}": [
           "rate<0.01"
@@ -101,14 +115,14 @@
       "assertions": {}
     },
     "soak": {
-      "status": "provisional",
+      "status": "baseline",
       "baseline": {
-        "date": null,
-        "commit": null
+        "date": "2026-11-21",
+        "commit": "47f4bea39ab56a52c248a5a843becdb1f7623e60"
       },
       "thresholds": {
         "http_req_duration{phase:main}": [
-          "p(95)<500"
+          "p(95)<55"
         ],
         "lt_unexpected_response{phase:main}": [
           "rate<0.01"
@@ -121,10 +135,10 @@
       }
     },
     "websocket-chat": {
-      "status": "provisional",
+      "status": "baseline",
       "baseline": {
-        "date": null,
-        "commit": null
+        "date": "2026-11-19",
+        "commit": "49e2785990a948b95fd415249b3dccd5ecc9d9f8"
       },
       "thresholds": {},
       "assertions": {},
@@ -132,7 +146,7 @@
         "ceiling": {
           "thresholds": {
             "lt_ws_handshake_ms": [
-              "p(95)<2000"
+              "p(95)<45"
             ]
           }
         },
@@ -145,7 +159,7 @@
               "rate<0.01"
             ],
             "http_req_duration{phase:main}": [
-              "p(95)<500"
+              "p(95)<400"
             ]
           },
           "assertions": {
@@ -163,19 +177,19 @@
               "rate<0.01"
             ]
           },
-          "_note": "30000 ms = the documented reconnect back-off cap (docs/chat-protocol.md, RECONNECT_CAP_MS); provisional."
+          "_note": "30000 ms = the documented reconnect back-off cap (docs/chat-protocol.md, RECONNECT_CAP_MS): a protocol bound, not a measurement (recorded p95 was 1.4 to 10.1 s over 6 runs); the value was kept at the cap on purpose."
         }
       }
     },
     "auth-abuse": {
-      "status": "provisional",
+      "status": "baseline",
       "baseline": {
-        "date": null,
-        "commit": null
+        "date": "2026-11-20",
+        "commit": "bccb35e18bfa471bd2ff561a1509663c1527b8e3"
       },
       "thresholds": {
         "http_req_duration{phase:stuffing}": [
-          "p(95)<500"
+          "p(95)<250"
         ],
         "lt_unexpected_response": [
           "rate<0.01"
@@ -200,14 +214,14 @@
       }
     },
     "metrics-overhead": {
-      "status": "provisional",
+      "status": "baseline",
       "baseline": {
-        "date": null,
-        "commit": null
+        "date": "2026-11-21",
+        "commit": "bccb35e18bfa471bd2ff561a1509663c1527b8e3"
       },
       "thresholds": {
         "http_req_duration{phase:main}": [
-          "p(95)<500"
+          "p(95)<45"
         ],
         "lt_unexpected_response{phase:main}": [
           "rate<0.01"
