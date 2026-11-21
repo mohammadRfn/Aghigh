@@ -195,7 +195,7 @@ pointing to the anchors below (anchor = lower-cased alert name).
 
 - **aghighhttp5xxratehigh** 5xx > 2% for 5m. Open API dashboard -> Traefik 5xx data link -> GlitchTip issue with the
   `request_id`. Common causes: PgBouncer saturation (DB dashboard), Redis state down (state-store errors).
-- **aghighhttpp95latencyhigh** p95 > 500 ms for 10m. Check p95 by route, then DB (locks, pool waits) and Redis.
+- **aghighhttpp95latencyhigh** p95 > 100 ms for 10m. Check p95 by route, then DB (locks, pool waits) and Redis.
   Re-baseline the threshold after Task 10.
 - **aghighmetricswritefailures** / **aghighmetricsbackenddown** the app cannot write/read redis-queue db 3:
   `docker compose --env-file .env.docker exec redis-queue redis-cli -n 3 ping`, memory (Redis dashboard), app log
@@ -282,16 +282,16 @@ The whole profile is about 770 MiB and under 10% of one core at idle. No service
 
 ## Task 10: measuring what observability costs
 
-Status: **not measured yet**. Every value below is `TODO(measure)`; the command next to it produces it. Read the
+Status: **partly measured** (rows 1, 3 and 4, from `docs/benchmarks/summary-k6-metrics-overhead-*.json`); the other values are `TODO(measure)`. The command next to each produces it. Read the
 numbers from the result files (`loadtests/results/SCHEMA.md`), copy the curated files to `docs/benchmarks/`, and only
 then replace a `TODO(measure)` here.
 
 | What | Value | Command | Where to read it |
 |---|---|---|---|
-| Latency and throughput cost of app metrics (off vs on) | `TODO(measure)` | `make obs-down && make k6-repeat TARGET=k6-metrics-overhead RUNS=3` | `summary-k6-metrics-overhead-*.json`: `p95.median`, `rps.median` of `metrics-off` vs `metrics-on` |
+| Latency and throughput cost of app metrics (off vs on) | off vs on, medians of 3 at 20 req/s for 3 min: p50 6.56 vs 6.59 ms, p95 29.06 vs 29.12 ms, 20.01 rps in both. The difference is inside the run-to-run spread (p95 28.55 to 29.58 ms off, 28.58 to 29.32 ms on): no cost is measurable at this load (SHA `bccb35e`, 2026-11-21) | `make obs-down && make k6-repeat TARGET=k6-metrics-overhead RUNS=3` | `summary-k6-metrics-overhead-*.json`: `p95.median`, `rps.median` of `metrics-off` vs `metrics-on` |
 | Cost of tracing at `SENTRY_TRACES_SAMPLE_RATE=0.05` | `TODO(measure)` | same series (`traces-on` variant; needs `SENTRY_LARAVEL_DSN`, see `run.env.SENTRY_DSN_SET`) | same summary, `traces-on` vs `metrics-on` |
-| Exported series (`aghigh_metrics_series`) under load | `TODO(measure)` | `make k6-metrics-overhead METRICS=metrics-on` | `invariants.app_metrics.aghigh_metrics_series` |
-| Memory of the metrics Redis db (ADR 0010) | `TODO(measure)` | `make k6-metrics-overhead METRICS=metrics-on` | `invariants.app_metrics.metrics_redis_memory_bytes`, `metrics_redis_keys` |
+| Exported series (`aghigh_metrics_series`) under load | 367 series, identical in all 3 `metrics-on` runs | `make k6-metrics-overhead METRICS=metrics-on` | `invariants.app_metrics.aghigh_metrics_series` |
+| Memory of the metrics Redis db (ADR 0010) | about 16 KB in 9 keys (15972 to 16479 bytes over 3 `metrics-on` runs) | `make k6-metrics-overhead METRICS=metrics-on` | `invariants.app_metrics.metrics_redis_memory_bytes`, `metrics_redis_keys` |
 | Resource cost of the observability stack itself (CPU, memory per container) | `TODO(measure)` | `make obs-up && make k6-metrics-overhead METRICS=obs-up` | `invariants.resources.containers.*` of the `obs-up` result |
 
 Rules for these numbers:
@@ -305,6 +305,8 @@ Rules for these numbers:
 
 ### HTTP p95 alert budget
 
-`AghighHttpP95LatencyHigh` in `docker/observability/prometheus/rules/aghigh.rules.yml` still uses the provisional
-500 ms. After the first baseline (`loadtests/README.md`, "Calibration"): set the budget from the measured soak p95,
-flip `loadtests/config/thresholds.json` to `status: baseline` in the same commit, and run `make obs-rules-test`.
+`AghighHttpP95LatencyHigh` fires when the app-wide p95 stays above 100 ms for 10 minutes. 100 ms is about 3 times the
+worst soak p95 of the baseline (33.9 ms, 3 runs at 5 req/s on one laptop, 2026-11-21) and a bucket boundary of
+`Catalog::HTTP_BUCKETS`, so `histogram_quantile` does not interpolate across it. The soak budget in
+`loadtests/config/thresholds.json` is 55 ms; the alert is deliberately looser because it watches every route, including
+slow ones (the order-flood burst had a p95 of about 1.5 s). It is a judgment, not a measurement of production traffic.
