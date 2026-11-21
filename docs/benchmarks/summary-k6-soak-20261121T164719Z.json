@@ -1,0 +1,61 @@
+{
+  "summary_schema_version": 1,
+  "generated_at": "2026-11-21T16:47:19Z",
+  "groups": [
+    {
+      "scenario": "soak",
+      "variant": "default",
+      "runs": 3,
+      "enough_runs": true,
+      "run_ids": [
+        "20261121T151047Z",
+        "20261121T154325Z",
+        "20261121T161600Z"
+      ],
+      "git_shas": [
+        "47f4bea39ab56a52c248a5a843becdb1f7623e60"
+      ],
+      "any_dirty": false,
+      "observability_stack": [
+        "down"
+      ],
+      "all_verdicts_passed": true,
+      "p50": {
+        "median": 11.055,
+        "min": 10.894,
+        "max": 11.51,
+        "n": 3
+      },
+      "p90": {
+        "median": 27.055,
+        "min": 27.023,
+        "max": 27.905,
+        "n": 3
+      },
+      "p95": {
+        "median": 32.463,
+        "min": 31.896,
+        "max": 33.854,
+        "n": 3
+      },
+      "p99": {
+        "median": 48.491,
+        "min": 48.054,
+        "max": 50.092,
+        "n": 3
+      },
+      "rps": {
+        "median": 5,
+        "min": 5,
+        "max": 5,
+        "n": 3
+      },
+      "error_rate": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "n": 3
+      }
+    }
+  ]
+}
