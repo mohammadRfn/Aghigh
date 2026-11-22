@@ -14,9 +14,9 @@ Remaining `TODO(measure)` items are listed in the docs that own them.**
 | Part | Status |
 |---|---|
 | k6 scripts (`scenarios/*.js`, `lib/*.js`) | Parsed with `k6 inspect` and executed with the pinned k6 v1.6.1 against a **mock** HTTP + Pusher server written from the route files and docs. Proves the script logic. Since 2026-11-19 also executed against the real stack for all seven scenarios (results in `docs/benchmarks/`) |
-| `scripts/*.sh`, Makefile targets | `bash -n`, and executed end to end against a `docker` **shim** with canned answers (verdict paths, guards, JSON merging). Executed end to end against the real Docker stack in the baseline runs (compose overlay, `docker stats` sampling, PgBouncer, Redis, Horizon commands). **Not yet exercised:** `make k6-image-fallback` |
+| `scripts/*.sh`, Makefile targets | `bash -n`, and executed end to end against a `docker` **shim** with canned answers (verdict paths, guards, JSON merging). Executed end to end against the real Docker stack in the baseline runs (compose overlay, `docker stats` sampling, PgBouncer, Redis, Horizon commands). `make k6-image-fallback` (download, published sha256 check, `docker import`) and `make k6-image-check` against the imported image (k6 v1.6.1) were run on 2026-11-22. |
 | `php artisan loadtest:seed-users` and the four new test files | **UNTESTED** (written without a PHP runtime; not even linted). Run `make lint stan test` first |
-| `compose.loadtest.yaml`, k6 `user:`/`ulimits`/results mount, `HTTP_BIND`, k6 image fallback (`docker import`) | **UNTESTED**. Check with `make loadtest-config` and `make k6-image-check` |
+| `compose.loadtest.yaml`, k6 `user:`/`ulimits`/results mount, `HTTP_BIND` | **UNTESTED**. Check with `make loadtest-config` and `make k6-image-check` |
 | Loki query for security events | **UNTESTED** (the recorded count comes from the log files) |
 | Assumptions about the real API taken from the code, not from a run | order answers carry `Location` for originals and replays; a customer can post into its own conversation before an agent claims it; a refused correct password during lockout may extend the lock (the script waits `2 x base + 3 s`) |
 
