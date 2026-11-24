@@ -1,0 +1,15 @@
+ failed_total 
+--------------
+          122
+(1 row)
+
+                 job                 |               exception_class                |  n  
+-------------------------------------+----------------------------------------------+-----
+ Modules\Ordering\Jobs\ChargePayment | Modules\Ordering\Exceptions\SagaStepRejected | 122
+(1 row)
+
+                                                              first_line                                                              |  n  
+--------------------------------------------------------------------------------------------------------------------------------------+-----
+ Modules\Ordering\Exceptions\SagaStepRejected: Payment failed (card_declined). in /app/Modules/Ordering/app/Jobs/ChargePayment.php:61 | 122
+(1 row)
+

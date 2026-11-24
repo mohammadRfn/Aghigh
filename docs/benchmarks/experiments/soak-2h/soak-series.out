@@ -1,0 +1,21 @@
+rows=211 window=120.8 min
+
+== redis-queue used_memory (MiB), samples used=211 skipped=0
+  first=2.9 peak=35.2 last=35.2
+  slope 0-60 min: 28.09 MiB/h | slope 60-end: 3.89 MiB/h | whole window: 15.82 MiB/h
+  every 10 min (min:MiB) 0:3 10:8 20:13 30:17 40:22 50:27 60:31 70:32 80:33 90:33 100:34 110:34 120:35
+
+== horizon container (MiB), samples used=210 skipped=1
+  first=536.1 peak=589.8 last=485.3
+  slope 0-60 min: -16.81 MiB/h | slope 60-end: -14.98 MiB/h | whole window: -9.21 MiB/h
+  every 10 min (min:MiB) 0:536 10:436 20:436 30:536 40:572 50:436 60:435 70:437 80:496 90:538 100:456 110:436 120:431
+
+== app container (MiB), samples used=210 skipped=1
+  first=178.8 peak=186.1 last=177.3
+  slope 0-60 min: 1.82 MiB/h | slope 60-end: 0.09 MiB/h | whole window: 1.06 MiB/h
+  every 10 min (min:MiB) 0:179 10:175 20:176 30:176 40:176 50:176 60:177 70:177 80:177 90:177 100:176 110:177 120:178
+
+== redis-queue container (MiB), samples used=210 skipped=1
+  first=9.8 peak=42.3 last=41.3
+  slope 0-60 min: 28.35 MiB/h | slope 60-end: 4.07 MiB/h | whole window: 16.03 MiB/h
+  every 10 min (min:MiB) 0:10 10:14 20:19 30:24 40:28 50:33 60:37 70:38 80:39 90:40 100:40 110:42 120:41
