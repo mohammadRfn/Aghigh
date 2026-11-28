@@ -1,0 +1,35 @@
+# Copy to group_vars/production/vault.yml, replace every value, then:  ansible-vault encrypt group_vars/production/vault.yml
+# The encrypted file and the vault password stay OUT of the repository (see .gitignore). Nothing here is real.
+# Generate secrets with e.g.:  openssl rand -hex 32     (letters and digits only: some are interpolated into SQL)
+vault_app_key: "base64:REPLACE_WITH_php_artisan_key_generate_--show"
+vault_app_previous_keys: ""
+vault_postgres_password: REPLACE_ME
+vault_db_migrator_password: REPLACE_ME
+vault_db_app_password: REPLACE_ME
+vault_db_monitor_password: REPLACE_ME
+vault_redis_password: REPLACE_ME
+vault_smtp_username: REPLACE_ME
+vault_smtp_password: REPLACE_ME
+vault_payment_webhook_secret: REPLACE_ME
+vault_payment_webhook_secret_previous: ""
+vault_reverb_app_id: REPLACE_ME
+vault_reverb_app_key: REPLACE_ME
+vault_reverb_app_secret: REPLACE_ME
+vault_metrics_token: REPLACE_ME
+vault_horizon_admin_token: REPLACE_ME
+vault_grafana_admin_password: REPLACE_ME
+vault_glitchtip_secret_key: REPLACE_ME
+vault_glitchtip_db_password: REPLACE_ME
+vault_sentry_dsn: ""
+# File contents exactly as written by `php artisan identity:jwt-keys --kid=k1` (storage/jwt/k1.private, k1.public).
+vault_jwt_private_key: |
+  REPLACE_WITH_THE_CONTENT_OF_storage/jwt/k1.private
+vault_jwt_public_key: |
+  REPLACE_WITH_THE_CONTENT_OF_storage/jwt/k1.public
+vault_jwt_verification_keys: "{}"
+# Backup repository credentials and the repository encryption passphrase (losing it = losing every backup).
+vault_backup_cipher_pass: REPLACE_ME
+vault_backup_s3_key: REPLACE_ME
+vault_backup_s3_key_secret: REPLACE_ME
+vault_backup_sftp_private_key: |
+  REPLACE_WITH_AN_OPENSSH_PRIVATE_KEY_IF_backup_repo_type_IS_sftp

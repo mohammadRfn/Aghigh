@@ -29,10 +29,15 @@ class HorizonServiceProvider extends HorizonApplicationServiceProvider
      */
     protected function gate(): void
     {
-        Gate::define('viewHorizon', function ($user = null) {
-            return in_array(optional($user)->email, [
-                //
-            ]);
+        // Task 11: outside `local` the dashboard is reachable only through Traefik's `admin` entrypoint, which is
+        // published on 127.0.0.1 (SSH tunnel). That router adds X-Admin-Edge-Token = HORIZON_ADMIN_TOKEN; the public
+        // routers remove the header and deny /horizon (docker/traefik/prod/dynamic/routers.yml). There is no
+        // session user (JWT is stateless), so the token is the whole check. No token configured = closed.
+        Gate::define('viewHorizon', function ($user = null): bool {
+            $expected = config('horizon.admin_token');
+            $given = request()->headers->get('X-Admin-Edge-Token');
+
+            return is_string($expected) && $expected !== '' && is_string($given) && hash_equals($expected, $given);
         });
     }
 }

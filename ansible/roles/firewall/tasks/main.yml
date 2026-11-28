@@ -1,0 +1,37 @@
+# firewall: UFW allows 22, 80 and 443 only.
+#
+# IMPORTANT: Docker publishes ports with its own iptables/nftables rules, which are evaluated BEFORE UFW's.
+# A published container port is reachable from the internet even when UFW denies it. UFW is therefore not what
+# protects the containers: compose.prod.yml is. Only Traefik publishes on 0.0.0.0 (80, 443); every admin tool and
+# the Traefik admin entrypoint publish on 127.0.0.1 (scripts/deploy/verify-compose.sh proves it on each deploy).
+- name: Install ufw
+  ansible.builtin.apt:
+    name: ufw
+    state: present
+
+- name: Deny incoming by default
+  community.general.ufw:
+    direction: incoming
+    policy: deny
+
+- name: Allow outgoing by default
+  community.general.ufw:
+    direction: outgoing
+    policy: allow
+
+- name: Allow SSH (rate limited)
+  community.general.ufw:
+    rule: limit
+    port: "{{ ssh_port | string }}"
+    proto: tcp
+
+- name: Allow HTTP and HTTPS
+  community.general.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop: ["80", "443"]
+
+- name: Enable ufw
+  community.general.ufw:
+    state: enabled

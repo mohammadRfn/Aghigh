@@ -1,0 +1,12 @@
+# Copy to inventory/production.yml (git-ignored) and fill in. No secrets here: they live in the vault file.
+# 203.0.113.10 is a documentation address (RFC 5737).
+all:
+  children:
+    production:
+      hosts:
+        aghigh-prod-1:
+          ansible_host: 203.0.113.10
+          # First run: the user your provider gives you (root or ubuntu). After the base role ran, root login and
+          # passwords are off: switch this to the admin user (admin_user in group_vars/all.yml).
+          ansible_user: root
+          ansible_port: 22

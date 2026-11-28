@@ -1,0 +1,59 @@
+# Task 11: non-secret settings. Secrets are the vault_* variables (group_vars/vault.example.yml).
+# Every base URL that a restricted network may block is a variable.
+
+# ---- people and keys ----
+admin_user: ops                 # human operator: sudo, full shell, SSH tunnels to the admin tools
+admin_ssh_public_keys: []       # REQUIRED before root login is disabled, e.g. ["ssh-ed25519 AAAA... you@laptop"]
+deploy_user: deploy             # runs the containers; in the docker group = root-equivalent on this host
+deploy_ci_public_key: ""        # CI key, restricted to /usr/local/bin/aghigh-deploy by a forced command
+ssh_port: 22
+
+# ---- network-dependent base URLs (defaults = normal internet access) ----
+apt_mirror_url: ""              # e.g. http://mirror.example.net/ubuntu ; empty = keep the image default
+apt_security_mirror_url: ""     # e.g. http://mirror.example.net/ubuntu ; empty = keep security.ubuntu.com
+docker_repo_base_url: https://download.docker.com
+docker_registry_mirrors: []     # dockerd registry-mirrors, e.g. ["https://mirror.example.net"]
+registry_prefix: ""             # REGISTRY_PREFIX for compose images; keep the trailing slash: "mirror.example.net/"
+
+# ---- application ----
+app_domain: aghigh.example.com
+frontend_origin: https://app.example.com
+acme_email: ops@example.com
+acme_ca_server: https://acme-v02.api.letsencrypt.org/directory   # rehearsal: https://acme-staging-v02.api.letsencrypt.org/directory
+acme_storage_file: acme.json                                      # rehearsal: acme-staging.json
+app_image_repo: ghcr.io/mohammadrfn/aghigh-app
+postgres_backup_image: ghcr.io/mohammadrfn/aghigh-postgres:18-pgbackrest-1
+compose_profiles: ""            # "observability" to run Grafana/Prometheus/Loki/GlitchTip on this host
+app_scale: 1
+reverb_scale: 1
+aghigh_root: /opt/aghigh
+app_log_dir: /var/log/aghigh
+app_container_uid: "1000"       # uid of the `app` user inside the image (Dockerfile ARG UID)
+jwt_active_kid: k1
+
+# ---- mail (real SMTP provider) ----
+smtp_host: smtp.example.com
+smtp_port: 587
+smtp_from_address: no-reply@aghigh.example.com
+smtp_from_name: Aghigh
+
+# ---- backups: off-server repository ----
+backup_repo_type: s3            # s3 | sftp
+backup_repo_path: /aghigh
+backup_retention_full: 4        # weekly fulls kept; WAL is kept for as long as a backup needs it (PITR window)
+backup_s3_endpoint: s3.example.com
+backup_s3_region: us-east-1
+backup_s3_bucket: aghigh-backups
+backup_s3_uri_style: path       # most S3-compatible stores need "path"
+backup_sftp_host: backup.example.com
+backup_sftp_user: aghigh
+backup_sftp_host_fingerprint: ""   # pinned host key fingerprint (pgBackRest repo1-sftp-host-fingerprint)
+backup_webhook_url: ""          # optional: JSON POST on every backup / restore-test result
+backup_mail_to: ""              # optional: needs a local `mail` command
+
+# ---- host policy ----
+unattended_automatic_reboot: false   # single node: a reboot is downtime, so it is done by hand in a window
+unattended_reboot_time: "03:30"
+sysctl_somaxconn: 4096               # configuration, not a measurement
+sysctl_file_max: 1048576             # configuration, not a measurement
+nofile_limit: 65536

@@ -184,3 +184,23 @@ k6-repeat: ## Hygiene: reset + run + cooldown, RUNS times, then median/min/max (
 
 k6-summarize: ## median/min/max over result files (FILES="loadtests/results/catalog-naive-*.json")
 > @./loadtests/scripts/summarize.sh $(FILES)
+
+# ---- Task 11: production deployment (docs/runbook.md, docs/migration-policy.md) ----
+.PHONY: prod-config check-migrations deploy-lint zero-downtime-check pin-digests
+
+prod-config: ## Prove the merged production compose model (first: cp .env.production.example .env.production; cp .env.pgbackrest.example .env.pgbackrest)
+> @ENV_FILE=.env.production PGBACKREST_ENV_FILE=.env.pgbackrest PROJECT_DIR=. SHARED_DIR=./.prod-shared ./scripts/deploy/verify-compose.sh
+
+check-migrations: ## Flag migrations that are unsafe for a zero-downtime deploy (runs in the app container; CI runs it too)
+> @$(DC) exec -T app php scripts/check-migrations.php
+
+deploy-lint: ## shellcheck + yamllint + actionlint on the deploy files (host tools, same commands as the CI job deploy-lint)
+> @shellcheck -x scripts/deploy/*.sh scripts/deploy/aghigh-deploy scripts/backup/*.sh scripts/smoke-test.sh scripts/zero-downtime-check.sh
+> @yamllint -c .yamllint compose.prod.yml docker/traefik/prod ansible .github/workflows/deploy.yml .github/workflows/postgres-image.yml
+> @actionlint
+
+zero-downtime-check: ## Constant-rate probe of /up + one catalog read, fails on any non-2xx or connection error (BASE_URL= DURATION=120)
+> @BASE_URL=$(or $(BASE_URL),http://localhost:8000) DURATION=$(or $(DURATION),120) ./scripts/zero-downtime-check.sh
+
+pin-digests: ## Resolve today's digest of every third-party image tag (review, then update compose.prod.yml and docs/deploy/image-digests.md)
+> @./scripts/deploy/pin-digests.sh

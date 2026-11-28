@@ -1,0 +1,47 @@
+# unattended-upgrades: security updates only (Ubuntu's default allowed origins), Docker packages excluded.
+#
+# Reboot policy: this is a single node, so a reboot is downtime. Automatic reboots are OFF by default
+# (unattended_automatic_reboot). When /var/run/reboot-required exists, reboot by hand in a maintenance window:
+# containers come back through `restart: unless-stopped` (docs/runbook.md "Reboot").
+- name: Install unattended-upgrades
+  ansible.builtin.apt:
+    name: unattended-upgrades
+    state: present
+
+- name: Enable the periodic run
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+      APT::Periodic::AutocleanInterval "7";
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Policy drop-in
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/52aghigh-unattended-upgrades
+    content: |
+      // Managed by Ansible (role unattended_upgrades).
+      // The Docker engine is upgraded by hand: an engine restart is planned work even with live-restore.
+      Unattended-Upgrade::Package-Blacklist {
+          "docker-ce";
+          "docker-ce-cli";
+          "containerd.io";
+          "docker-compose-plugin";
+          "docker-buildx-plugin";
+      };
+      Unattended-Upgrade::Remove-Unused-Kernel-Packages "true";
+      Unattended-Upgrade::Remove-Unused-Dependencies "true";
+      Unattended-Upgrade::Automatic-Reboot "{{ unattended_automatic_reboot | bool | lower }}";
+      Unattended-Upgrade::Automatic-Reboot-Time "{{ unattended_reboot_time }}";
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Service unattended-upgrades is enabled
+  ansible.builtin.service:
+    name: unattended-upgrades
+    enabled: true
+    state: started

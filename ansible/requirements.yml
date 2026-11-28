@@ -1,0 +1,7 @@
+# ansible-galaxy collection install -r requirements.yml
+# In a restricted network point ANSIBLE_GALAXY_SERVER at a mirror or install from tarballs (-r accepts file paths).
+collections:
+  - name: community.general
+    version: ">=9.0.0"
+  - name: ansible.posix
+    version: ">=1.5.0"

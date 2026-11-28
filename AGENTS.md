@@ -168,6 +168,29 @@ JSON on stdout, channels `app`, `security`, `audit`, `slow_query`. Sensitive key
 - Fixtures: `php artisan loadtest:seed-users` (refused outside local/testing/loadtest). Docs: `loadtests/README.md`,
   `docs/benchmarks/`.
 
+## Production deployment (Task 11)
+- Production = `compose.yaml` + `compose.prod.yml` with the server-side `.env.production` (never in the repo, never in
+  an image). Never add ports, bind mounts of the source tree, Mailpit or loadtest settings to `compose.prod.yml`;
+  `scripts/deploy/verify-compose.sh` (`make prod-config`, CI job `deploy-lint`) proves the merged model: Traefik is the
+  only service with ports (80/443 on 0.0.0.0, the `admin` entrypoint on 127.0.0.1).
+- Third-party images are pinned by digest in `compose.prod.yml` and recorded in `docs/deploy/image-digests.md`
+  (`make pin-digests`). Changing Traefik/Postgres/PgBouncer/Redis config or images is NOT zero-downtime: the deploy
+  refuses it without `--allow-infra-recreate`.
+- Deploy = `.github/workflows/deploy.yml` -> `ssh deploy@host "deploy <sha>"` -> `scripts/deploy/deploy.sh` (migrate
+  one-off container -> Horizon -> rolling `app`/`reverb` via `scripts/deploy/roll.sh` -> smoke test -> automatic
+  rollback). The image carries its own compose files and scripts; keep `compose*.yml`, `docker/` and `scripts/` out of
+  `.dockerignore`. Rollback never runs `migrate:rollback`.
+- Migrations are expand-only per release (docs/migration-policy.md); `php scripts/check-migrations.php` runs in CI.
+  Never add a new migration to `scripts/check-migrations-baseline.txt`.
+- Routing lives in `docker/traefik/prod/dynamic/routers.yml` (`/internal` and `/horizon` are denied publicly);
+  `upstreams.yml` is rewritten by the roll. `REVERB_HOST/PORT/SCHEME` stay the internal publishing target
+  (`reverb:8080`, http); clients use `VITE_REVERB_*` (domain, 443, https).
+- Redis requires a password in production only; dev and loadtest stay unauthenticated. In scripts prefer `REDISCLI_AUTH`
+  (set inside the prod Redis containers) over `-a`.
+- Backups: pgBackRest in `docker/postgres/Dockerfile`, off-server encrypted repository, `scripts/backup/*`, systemd
+  timers from the Ansible role `app`. GlitchTip runs on its own Postgres in production and is not backed up.
+- Host setup is `ansible/` (idempotent). Runbook, assumptions and everything `UNTESTED`: `docs/runbook.md`.
+
 ## Workflow
 One branch per task (`feat/<task>`), conventional commits. Before finishing: `make lint stan test test-int` green.
 Write the docs a task asks for in `docs/`. Mark anything unmeasured as `TODO(measure)`.

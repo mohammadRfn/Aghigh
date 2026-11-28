@@ -1,0 +1,180 @@
+# app: directory layout, server-side secrets rendered from the vault, deploy wrapper, log rotation, backup timers.
+# Nothing here pulls or starts containers: that is the deploy (scripts/deploy/deploy.sh through the wrapper).
+- name: Directory layout
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: "{{ aghigh_root }}", owner: "{{ deploy_user }}", group: "{{ deploy_user }}", mode: "0755" }
+    - { path: "{{ aghigh_root }}/app", owner: "{{ deploy_user }}", group: "{{ deploy_user }}", mode: "0755" }
+    - { path: "{{ aghigh_root }}/state", owner: "{{ deploy_user }}", group: "{{ deploy_user }}", mode: "0750" }
+    - { path: "{{ aghigh_root }}/shared", owner: "{{ deploy_user }}", group: "{{ deploy_user }}", mode: "0750" }
+    # Mounted read-only into the PHP containers; the image's `app` user must be able to read the private key.
+    - { path: "{{ aghigh_root }}/shared/jwt", owner: "{{ app_container_uid }}", group: root, mode: "0500" }
+    # Bind-mounted by dockerd (root): nobody else on the host needs to enter these.
+    - { path: "{{ aghigh_root }}/shared/redis", owner: root, group: root, mode: "0700" }
+    - { path: "{{ aghigh_root }}/shared/pgbackrest", owner: root, group: root, mode: "0755" }
+    # App containers write <service>.jsonl here. Not group/world writable, so logrotate accepts it without `su`.
+    - { path: "{{ app_log_dir }}", owner: "{{ app_container_uid }}", group: root, mode: "0755" }
+
+- name: Application environment (.env.production)
+  ansible.builtin.template:
+    src: env.production.j2
+    dest: "{{ aghigh_root }}/shared/.env.production"
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+    mode: "0600"
+  no_log: true
+
+- name: Backup repository settings for pgBackRest (.env.pgbackrest)
+  ansible.builtin.template:
+    src: env.pgbackrest.j2
+    dest: "{{ aghigh_root }}/shared/.env.pgbackrest"
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+    mode: "0600"
+  no_log: true
+
+- name: SFTP key for the backup repository (only for backup_repo_type=sftp; uid 999 = postgres in the image)
+  ansible.builtin.copy:
+    dest: "{{ aghigh_root }}/shared/pgbackrest/id_backup"
+    content: "{{ vault_backup_sftp_private_key }}"
+    owner: "999"
+    group: root
+    mode: "0400"
+  no_log: true
+  when: backup_repo_type == 'sftp'
+
+# requirepass comes from a file so the password never appears in the redis-server command line.
+- name: Redis auth file
+  ansible.builtin.copy:
+    dest: "{{ aghigh_root }}/shared/redis/auth.conf"
+    content: "requirepass {{ vault_redis_password }}\n"
+    owner: root
+    group: root
+    mode: "0644"
+  no_log: true
+
+- name: JWT private key
+  ansible.builtin.copy:
+    dest: "{{ aghigh_root }}/shared/jwt/{{ jwt_active_kid }}.private"
+    content: "{{ vault_jwt_private_key }}"
+    owner: "{{ app_container_uid }}"
+    group: root
+    mode: "0400"
+  no_log: true
+
+- name: JWT public key
+  ansible.builtin.copy:
+    dest: "{{ aghigh_root }}/shared/jwt/{{ jwt_active_kid }}.public"
+    content: "{{ vault_jwt_public_key }}"
+    owner: "{{ app_container_uid }}"
+    group: root
+    mode: "0444"
+
+- name: Deploy knobs (sourced by scripts/deploy/lib.sh; no secrets)
+  ansible.builtin.copy:
+    dest: "{{ aghigh_root }}/shared/deploy.env"
+    content: |
+      # Managed by Ansible (role app). Shell syntax.
+      AGHIGH_ROOT={{ aghigh_root }}
+      COMPOSE_PROFILES={{ compose_profiles }}
+      APP_SCALE={{ app_scale }}
+      REVERB_SCALE={{ reverb_scale }}
+      APP_LOG_DIR={{ app_log_dir }}
+      KEEP_RELEASES=5
+      SMOKE_INSECURE={{ '1' if 'staging' in acme_ca_server else '0' }}
+      BACKUP_WEBHOOK_URL={{ backup_webhook_url }}
+      BACKUP_MAIL_TO={{ backup_mail_to }}
+    owner: root
+    group: "{{ deploy_user }}"
+    mode: "0640"
+
+- name: Deploy wrapper (the forced command of the CI key)
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../scripts/deploy/aghigh-deploy"
+    dest: /usr/local/bin/aghigh-deploy
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Rotate the application JSON logs
+  ansible.builtin.copy:
+    dest: /etc/logrotate.d/aghigh
+    content: |
+      # Managed by Ansible (role app). copytruncate: the PHP processes keep their file handles open.
+      {{ app_log_dir }}/*.jsonl {
+          daily
+          rotate 7
+          maxsize 100M
+          missingok
+          notifempty
+          compress
+          delaycompress
+          copytruncate
+      }
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Backup and restore-test services
+  ansible.builtin.copy:
+    dest: "/etc/systemd/system/{{ item.name }}.service"
+    content: |
+      # Managed by Ansible (role app).
+      [Unit]
+      Description={{ item.description }}
+      Wants=docker.service
+      After=docker.service
+
+      [Service]
+      Type=oneshot
+      User={{ deploy_user }}
+      Group=docker
+      ExecStart={{ item.command }}
+      TimeoutStartSec=6h
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ app_timers }}"
+  loop_control:
+    label: "{{ item.name }}"
+  notify: Reload systemd units
+
+- name: Backup and restore-test timers
+  ansible.builtin.copy:
+    dest: "/etc/systemd/system/{{ item.name }}.timer"
+    content: |
+      # Managed by Ansible (role app).
+      [Unit]
+      Description={{ item.description }} (timer)
+
+      [Timer]
+      OnCalendar={{ item.on_calendar }}
+      RandomizedDelaySec=600
+      Persistent=true
+
+      [Install]
+      WantedBy=timers.target
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ app_timers }}"
+  loop_control:
+    label: "{{ item.name }}"
+  notify: Reload systemd units
+
+- name: Apply unit changes now
+  ansible.builtin.meta: flush_handlers
+
+- name: Timers are enabled
+  ansible.builtin.systemd:
+    name: "{{ item.name }}.timer"
+    enabled: true
+    state: started
+  loop: "{{ app_timers }}"
+  loop_control:
+    label: "{{ item.name }}"

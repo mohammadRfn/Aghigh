@@ -149,3 +149,35 @@ jobs:
       - uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  # Task 11: migrations that are unsafe for a zero-downtime deploy block the pipeline (docs/migration-policy.md).
+  migrations:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          coverage: none
+      - run: php scripts/check-migrations.php
+
+  # Task 11: lint the deploy files and PROVE the merged production compose model with the example env files
+  # (Traefik is the only service with ports, 80/443 on 0.0.0.0, no dev mounts, digests pinned, ...).
+  deploy-lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Linters (pinned versions)
+        run: |
+          pipx install yamllint==1.38.0
+          pipx install actionlint-py==1.7.12.25
+      - run: shellcheck -x scripts/deploy/*.sh scripts/deploy/aghigh-deploy scripts/backup/*.sh scripts/smoke-test.sh scripts/zero-downtime-check.sh
+      - run: yamllint -c .yamllint compose.prod.yml docker/traefik/prod ansible .github/workflows/deploy.yml .github/workflows/postgres-image.yml
+      - run: actionlint
+      - name: Merged production compose model
+        run: |
+          cp .env.production.example .env.production
+          cp .env.pgbackrest.example .env.pgbackrest
+          docker compose version
+          ENV_FILE=.env.production PGBACKREST_ENV_FILE=.env.pgbackrest PROJECT_DIR=. SHARED_DIR=./.prod-shared scripts/deploy/verify-compose.sh

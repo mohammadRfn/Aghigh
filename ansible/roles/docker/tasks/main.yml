@@ -1,0 +1,62 @@
+# docker: engine + compose plugin from the official repository (base URL is a variable), daemon.json with log
+# rotation and live-restore. Nothing is downloaded with curl | sh.
+- name: Docker apt repository
+  ansible.builtin.deb822_repository:
+    name: docker
+    types: [deb]
+    uris: "{{ docker_repo_base_url }}/linux/ubuntu"
+    suites: "{{ ansible_facts['distribution_release'] }}"
+    components: [stable]
+    architectures: "{{ 'arm64' if ansible_facts['architecture'] == 'aarch64' else 'amd64' }}"
+    signed_by: "{{ docker_repo_base_url }}/linux/ubuntu/gpg"
+    state: present
+  register: docker_repo
+
+- name: Refresh the package index after adding the repository # noqa: no-handler
+  ansible.builtin.apt:
+    update_cache: true
+  when: docker_repo is changed
+
+- name: Docker engine and plugins
+  ansible.builtin.apt:
+    name: [docker-ce, docker-ce-cli, containerd.io, docker-buildx-plugin, docker-compose-plugin]
+    state: present
+
+- name: Docker configuration directory
+  ansible.builtin.file:
+    path: /etc/docker
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+# live-restore: containers keep running while dockerd restarts (engine upgrade). Log rotation here is the default
+# for containers without their own logging block; compose.yaml sets the same values per service.
+- name: Daemon configuration (daemon.json)
+  ansible.builtin.copy:
+    dest: /etc/docker/daemon.json
+    content: "{{ docker_daemon_config | to_nice_json }}\n"
+    owner: root
+    group: root
+    mode: "0644"
+  vars:
+    docker_daemon_base:
+      log-driver: json-file
+      log-opts:
+        max-size: 10m
+        max-file: "3"
+      live-restore: true
+    docker_daemon_config: "{{ docker_daemon_base | combine({'registry-mirrors': docker_registry_mirrors} if docker_registry_mirrors | length > 0 else {}) }}"
+  notify: Restart docker
+
+- name: Docker is enabled and running
+  ansible.builtin.service:
+    name: docker
+    enabled: true
+    state: started
+
+- name: Deploy user may talk to the Docker socket (this makes it root-equivalent, see role base)
+  ansible.builtin.user:
+    name: "{{ deploy_user }}"
+    groups: [docker]
+    append: true

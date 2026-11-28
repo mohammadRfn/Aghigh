@@ -1,0 +1,14 @@
+# Times are server local time (keep the server on UTC). Weekly full, daily incremental, weekly restore test.
+app_timers:
+  - name: aghigh-backup-full
+    description: Aghigh weekly full backup (pgBackRest)
+    command: "{{ aghigh_root }}/app/scripts/backup/backup.sh full"
+    on_calendar: "Sun *-*-* 02:00:00"
+  - name: aghigh-backup-incr
+    description: Aghigh daily incremental backup (pgBackRest)
+    command: "{{ aghigh_root }}/app/scripts/backup/backup.sh incr"
+    on_calendar: "Mon..Sat *-*-* 02:00:00"
+  - name: aghigh-restore-test
+    description: Aghigh weekly restore test
+    command: "{{ aghigh_root }}/app/scripts/backup/restore-test.sh"
+    on_calendar: "Wed *-*-* 04:00:00"

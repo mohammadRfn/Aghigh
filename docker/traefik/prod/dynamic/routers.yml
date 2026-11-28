@@ -1,0 +1,72 @@
+# Task 11: production routing (file provider, hot-reloaded). Traefik renders this file as a Go template BEFORE it
+# parses the YAML, comments included: write template actions only where a value is wanted (the two env lookups
+# below read APP_DOMAIN and HORIZON_ADMIN_TOKEN from the traefik service environment in compose.prod.yml).
+# The upstream servers live in upstreams.yml (same directory), which scripts/deploy/roll.sh rewrites during a roll.
+#
+# Never routed publicly:
+#   /internal/*   metrics (docs/security.md): Prometheus scrapes app:8000 on the backend network.
+#   /horizon      dashboard: only through the `admin` entrypoint, published on 127.0.0.1 (SSH tunnel).
+#   /apps/*       Reverb's signed HTTP API: no router matches it for the reverb service; the app router answers 404.
+# Traefik has no "deny" middleware, so the deny routers win on priority and use an ipAllowList nobody can match.
+http:
+  routers:
+    internal-deny:
+      rule: 'PathPrefix(`/internal`)'
+      entryPoints: [websecure]
+      service: app
+      priority: 1000
+      middlewares: [deny-all]
+    horizon-deny:
+      rule: 'PathPrefix(`/horizon`) || PathPrefix(`/vendor/horizon`)'
+      entryPoints: [websecure]
+      service: app
+      priority: 1000
+      middlewares: [deny-all]
+    reverb:
+      # wss://<domain>/app/<key>: the WebSocket upgrade is proxied as is.
+      rule: 'Host(`{{ env "APP_DOMAIN" }}`) && PathPrefix(`/app/`)'
+      entryPoints: [websecure]
+      service: reverb
+      priority: 100
+      middlewares: [edge-request, edge-headers]
+    app:
+      rule: 'Host(`{{ env "APP_DOMAIN" }}`)'
+      entryPoints: [websecure]
+      service: app
+      priority: 1
+      middlewares: [edge-request, edge-headers]
+    # admin entrypoint (127.0.0.1:8081 on the host): ONLY the Horizon dashboard and its API.
+    horizon-admin:
+      rule: 'PathPrefix(`/horizon`) || PathPrefix(`/vendor/horizon`)'
+      entryPoints: [admin]
+      service: app
+      priority: 10
+      middlewares: [admin-token]
+
+  middlewares:
+    deny-all:
+      ipAllowList:
+        sourceRange: ["192.0.2.1/32"] # RFC 5737 documentation address: no client ever matches -> 403
+    # Public requests can never carry the admin marker: an empty value removes the header.
+    edge-request:
+      headers:
+        customRequestHeaders:
+          X-Admin-Edge-Token: ""
+    # Same values as Modules\Shared\Http\Middleware\SecurityHeaders, so responses that never reach Laravel
+    # (Traefik 403/404/502, the Reverb handshake) carry them too.
+    edge-headers:
+      headers:
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        contentTypeNosniff: true
+        frameDeny: true
+        referrerPolicy: no-referrer
+        customResponseHeaders:
+          Server: ""
+          X-Powered-By: ""
+    # The Horizon gate (App\Providers\HorizonServiceProvider) accepts a request only when this header equals
+    # HORIZON_ADMIN_TOKEN. Empty token = header removed = dashboard closed.
+    admin-token:
+      headers:
+        customRequestHeaders:
+          X-Admin-Edge-Token: '{{ env "HORIZON_ADMIN_TOKEN" }}'

@@ -15,3 +15,6 @@ loadtests/results
 .env.loadtest
 .env.loadtest.variant
 loadtests/results/*
+# Task 11: not needed inside the image (the image DOES carry compose*.yml, docker/ and scripts/: the deploy bundle)
+ansible
+.prod-shared

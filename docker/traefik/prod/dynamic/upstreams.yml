@@ -1,0 +1,13 @@
+# Managed by scripts/deploy/roll.sh. Steady state = Docker DNS names (the topology the load tests measured).
+# During a roll the script pins explicit container IPs here so Traefik never sends a request to a container
+# that is still starting or already draining, then restores this content. Do not edit by hand during a deploy.
+http:
+  services:
+    app:
+      loadBalancer:
+        servers:
+          - url: "http://app:8000"
+    reverb:
+      loadBalancer:
+        servers:
+          - url: "http://reverb:8080"
