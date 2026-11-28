@@ -9,9 +9,21 @@ set -euo pipefail
 : "${DB_MONITOR_USER:=aghigh_monitor}"
 : "${GLITCHTIP_DB_USER:=glitchtip}"
 : "${GLITCHTIP_DB_NAME:=glitchtip}"
-if [ -z "${DB_MONITOR_PASSWORD:-}" ] || [ -z "${GLITCHTIP_DB_PASSWORD:-}" ]; then
+# Task 11: production runs GlitchTip on its own Postgres instance (compose.prod.yml sets this to false), so the
+# application cluster, its WAL archive and its backups carry no GlitchTip role or database.
+: "${GLITCHTIP_SHARED_CLUSTER:=true}"
+if [ -z "${DB_MONITOR_PASSWORD:-}" ] || { [ "$GLITCHTIP_SHARED_CLUSTER" = "true" ] && [ -z "${GLITCHTIP_DB_PASSWORD:-}" ]; }; then
   echo "02-observability-roles: DB_MONITOR_PASSWORD / GLITCHTIP_DB_PASSWORD are empty (run make obs-keys); skipping" >&2
   exit 0
+fi
+
+glitchtip_role_sql=""
+if [ "$GLITCHTIP_SHARED_CLUSTER" = "true" ]; then
+  glitchtip_role_sql="  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${GLITCHTIP_DB_USER}') THEN
+    CREATE ROLE ${GLITCHTIP_DB_USER} LOGIN PASSWORD '${GLITCHTIP_DB_PASSWORD}';
+  ELSE
+    ALTER ROLE ${GLITCHTIP_DB_USER} WITH LOGIN PASSWORD '${GLITCHTIP_DB_PASSWORD}';
+  END IF;"
 fi
 
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<SQL
@@ -22,17 +34,18 @@ BEGIN
   ELSE
     ALTER ROLE ${DB_MONITOR_USER} WITH LOGIN PASSWORD '${DB_MONITOR_PASSWORD}' CONNECTION LIMIT 3;
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${GLITCHTIP_DB_USER}') THEN
-    CREATE ROLE ${GLITCHTIP_DB_USER} LOGIN PASSWORD '${GLITCHTIP_DB_PASSWORD}';
-  ELSE
-    ALTER ROLE ${GLITCHTIP_DB_USER} WITH LOGIN PASSWORD '${GLITCHTIP_DB_PASSWORD}';
-  END IF;
+${glitchtip_role_sql}
 END
 \$\$;
 
 GRANT pg_monitor TO ${DB_MONITOR_USER};
 GRANT CONNECT ON DATABASE ${POSTGRES_DB} TO ${DB_MONITOR_USER};
 SQL
+
+if [ "$GLITCHTIP_SHARED_CLUSTER" != "true" ]; then
+  echo "02-observability-roles: ${DB_MONITOR_USER} (pg_monitor) is in place; GlitchTip uses its own Postgres instance"
+  exit 0
+fi
 
 # CREATE DATABASE cannot run inside a transaction block or a DO body: test first.
 if ! psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '${GLITCHTIP_DB_NAME}'" | grep -q 1; then

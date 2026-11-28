@@ -38,3 +38,10 @@ docker/observability/secrets/*
 loadtests/results/*
 !loadtests/results/.gitkeep
 !loadtests/results/SCHEMA.md
+# Task 11: production env files, inventory and vault never enter the repository
+.env.pgbackrest
+/.prod-shared/
+ansible/inventory/production.yml
+ansible/group_vars/production/
+ansible/*.retry
+.vault-pass*

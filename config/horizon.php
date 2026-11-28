@@ -61,8 +61,12 @@ return [
         Str::slug(env('APP_NAME', 'laravel'), '_').'_horizon:'
     ),
 
-    // Dashboard: local environment only (App\Providers\HorizonServiceProvider); Task 11 also blocks it at the proxy.
+    // Dashboard: open in `local`; elsewhere only with the header Traefik's admin entrypoint adds (Task 11,
+    // App\Providers\HorizonServiceProvider). The public entrypoint denies /horizon and strips that header.
     'middleware' => ['web'],
+
+    // Empty = the dashboard is closed outside `local`.
+    'admin_token' => env('HORIZON_ADMIN_TOKEN'),
 
     // LongWaitDetected thresholds in seconds per connection:queue.
     'waits' => [

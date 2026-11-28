@@ -1,0 +1,228 @@
+# Task 11: build the prod image (tag = git SHA), push it, deploy over SSH with zero HTTP downtime.
+#
+# Runs after the CI workflow finished successfully on main: `workflow_run` + conclusion == success means every CI
+# job passed (quality, integration, audit, secrets, plus the Task 11 jobs migrations and deploy-lint).
+# Manual runs (workflow_dispatch) deploy or roll back a chosen SHA; a manual deploy re-checks the CI result.
+#
+# Repository configuration (Settings -> Environments -> production; nothing of it is in the repository):
+#   secrets  DEPLOY_SSH_KEY       private key whose public half is deploy_ci_public_key (forced command on the server)
+#            DEPLOY_KNOWN_HOSTS   the server's host key line(s), pinned: `ssh-keyscan -t ed25519 <host>` ONCE, verified
+#                                 against the fingerprint shown on the server console. Never scanned at deploy time.
+#   vars     DEPLOY_HOST, DEPLOY_USER (default deploy), DEPLOY_PORT (default 22), APP_DOMAIN,
+#            REGISTRY (default ghcr.io), REGISTRY_PREFIX (mirror for the base image, with trailing slash; default empty)
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      action:
+        description: deploy or rollback
+        type: choice
+        options: [deploy, rollback]
+        default: deploy
+      sha:
+        description: "40-hex git SHA (deploy: default = the selected ref; rollback: default = the previous release)"
+        type: string
+        required: false
+      allow_infra_recreate:
+        description: "Allow recreating Postgres/Redis/PgBouncer/Traefik (NOT zero-downtime: maintenance window)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# One deploy at a time, never cancelled half-way (the server-side lock is the second line of defence).
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  # Digest-pinned base image (docs/deploy/image-digests.md). Refresh with scripts/deploy/pin-digests.sh.
+  FRANKENPHP_IMAGE: dunglas/frankenphp:1-php8.5@sha256:b8e0919047838ea32771ef573d74df9a9128de1e908a999366e26c11bc6e7ba4
+
+jobs:
+  gate:
+    name: Resolve SHA and require green CI
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      checks: read
+    outputs:
+      sha: ${{ steps.resolve.outputs.sha }}
+      action: ${{ steps.resolve.outputs.action }}
+      image: ${{ steps.resolve.outputs.image }}
+    steps:
+      - name: Resolve
+        id: resolve
+        env:
+          EVENT: ${{ github.event_name }}
+          RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+          INPUT_SHA: ${{ inputs.sha }}
+          INPUT_ACTION: ${{ inputs.action }}
+          REF_SHA: ${{ github.sha }}
+          REGISTRY: ${{ vars.REGISTRY || 'ghcr.io' }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          set -euo pipefail
+          action="${INPUT_ACTION:-deploy}"
+          if [ "$EVENT" = "workflow_run" ]; then sha="$RUN_SHA"; else sha="${INPUT_SHA:-}"; fi
+          if [ -z "$sha" ] && [ "$action" = "deploy" ]; then sha="$REF_SHA"; fi
+          if [ -n "$sha" ] && ! [[ "$sha" =~ ^[0-9a-f]{40}$ ]]; then echo "not a 40-hex SHA: $sha"; exit 1; fi
+          {
+            echo "sha=$sha"
+            echo "action=$action"
+            echo "image=$REGISTRY/${OWNER,,}/aghigh-app"
+          } >> "$GITHUB_OUTPUT"
+      - name: Manual deploy - the CI jobs must have passed for this SHA
+        if: github.event_name == 'workflow_dispatch' && steps.resolve.outputs.action == 'deploy'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ steps.resolve.outputs.sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          runs="$(gh api "repos/$REPO/commits/$SHA/check-runs?per_page=100" --jq '[.check_runs[] | {name, conclusion}]')"
+          for job in quality integration audit secrets; do
+            ok="$(jq -r --arg j "$job" '[.[] | select(.name == $j and .conclusion == "success")] | length' <<<"$runs")"
+            if [ "$ok" -lt 1 ]; then echo "CI job '$job' has not passed for $SHA"; exit 1; fi
+          done
+
+  build:
+    name: Build and push the prod image
+    needs: gate
+    if: needs.gate.outputs.action == 'deploy'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.gate.outputs.sha }}
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ vars.REGISTRY || 'ghcr.io' }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build target prod, tag = git SHA
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: prod
+          push: true
+          tags: ${{ needs.gate.outputs.image }}:${{ needs.gate.outputs.sha }}
+          build-args: |
+            FRANKENPHP_IMAGE=${{ vars.REGISTRY_PREFIX }}${{ env.FRANKENPHP_IMAGE }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: The image carries its own deploy bundle
+        env:
+          IMAGE: ${{ needs.gate.outputs.image }}:${{ needs.gate.outputs.sha }}
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint sh "$IMAGE" -c \
+            'test -f /app/compose.yaml && test -f /app/compose.prod.yml && test -x /app/scripts/deploy/deploy.sh && test -f /app/docker/traefik/prod/dynamic/routers.yml && ! ls /app/.env* 2>/dev/null | grep -v "^/app/.env.example$"'
+
+  deploy:
+    name: Deploy (zero-downtime) or roll back
+    needs: [gate, build]
+    if: always() && needs.gate.result == 'success' && (needs.build.result == 'success' || needs.build.result == 'skipped')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: production
+    env:
+      SHA: ${{ needs.gate.outputs.sha }}
+      ACTION: ${{ needs.gate.outputs.action }}
+      BASE_URL: https://${{ vars.APP_DOMAIN }}
+      DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ vars.DEPLOY_USER || 'deploy' }}
+      DEPLOY_PORT: ${{ vars.DEPLOY_PORT || '22' }}
+      ALLOW_INFRA_RECREATE: ${{ inputs.allow_infra_recreate && '1' || '0' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.gate.outputs.sha || github.sha }}
+      - name: SSH key and pinned known_hosts
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          [ -n "$DEPLOY_SSH_KEY" ] && [ -n "$DEPLOY_KNOWN_HOSTS" ] && [ -n "$DEPLOY_HOST" ] || { echo "DEPLOY_SSH_KEY, DEPLOY_KNOWN_HOSTS and DEPLOY_HOST are required"; exit 1; }
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts_deploy
+      - name: Start the zero-downtime probe (constant rate for the whole deploy)
+        run: |
+          set -euo pipefail
+          rm -f /tmp/zd.stop
+          OUT=/tmp/zd STOP_FILE=/tmp/zd.stop nohup scripts/zero-downtime-check.sh > /tmp/zd.log 2>&1 &
+          echo $! > /tmp/zd.pid
+          sleep 10 # a baseline before anything changes
+      - name: Deploy or roll back on the server
+        id: remote
+        run: |
+          set -uo pipefail
+          if [ "$ACTION" = "rollback" ]; then
+            command="rollback${SHA:+ $SHA}"
+          else
+            command="deploy $SHA"
+            if [ "$ALLOW_INFRA_RECREATE" = "1" ]; then command="$command --allow-infra-recreate"; fi
+          fi
+          ssh -i ~/.ssh/id_deploy -p "$DEPLOY_PORT" -o IdentitiesOnly=yes -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts_deploy" \
+            -o ServerAliveInterval=30 "$DEPLOY_USER@$DEPLOY_HOST" "$command"
+          rc=$?
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"
+          # 0 = live, 1 = failed and the previous release is serving, 2 = failed and the rollback failed too
+          exit 0
+      - name: Stop the probe and read the verdict
+        id: probe
+        if: always()
+        run: |
+          set -uo pipefail
+          sleep 10 # keep probing a little after the deploy returned
+          touch /tmp/zd.stop
+          pid="$(cat /tmp/zd.pid 2>/dev/null || true)"
+          for _ in $(seq 1 60); do
+            if [ -z "$pid" ] || ! kill -0 "$pid" 2>/dev/null; then break; fi
+            sleep 1
+          done
+          cat /tmp/zd.log || true
+          if grep -q '^PASSED' /tmp/zd.log; then echo "verdict=passed" >> "$GITHUB_OUTPUT"; else echo "verdict=failed" >> "$GITHUB_OUTPUT"; fi
+      - name: Smoke test from outside
+        if: steps.remote.outputs.rc == '0'
+        run: scripts/smoke-test.sh
+      - name: Verdict
+        if: always()
+        env:
+          REMOTE_RC: ${{ steps.remote.outputs.rc }}
+          PROBE: ${{ steps.probe.outputs.verdict }}
+        run: |
+          set -euo pipefail
+          rm -f ~/.ssh/id_deploy
+          case "$REMOTE_RC" in
+            0) echo "release is live" ;;
+            1) echo "::error::deploy failed; the previous release is serving (automatic rollback, no migrate:rollback)"; exit 1 ;;
+            *) echo "::error::deploy failed AND the automatic rollback failed (rc=$REMOTE_RC): docs/runbook.md 'Failed deploy'"; exit 1 ;;
+          esac
+          if [ "$PROBE" != "passed" ]; then
+            if [ "$ALLOW_INFRA_RECREATE" = "1" ]; then
+              echo "::warning::the probe saw failed requests; expected, infrastructure was recreated on request"
+            else
+              echo "::error::zero-downtime check FAILED: requests failed during the deploy (see the probe step; the runner's network path is included)"
+              exit 1
+            fi
+          fi

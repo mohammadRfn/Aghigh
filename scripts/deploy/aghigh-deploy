@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# Task 11: the ONLY thing the CI deploy key may run. Installed by Ansible as /usr/local/bin/aghigh-deploy and
+# bound to the key in authorized_keys:
+#   command="/usr/local/bin/aghigh-deploy",no-port-forwarding,no-agent-forwarding,no-X11-forwarding,no-pty ssh-ed25519 ...
+# sshd puts what the client asked for into SSH_ORIGINAL_COMMAND; nothing of it is ever evaluated by a shell.
+#   deploy <sha> [--allow-infra-recreate] [--skip-migrate] [--force]
+#   rollback [<sha>]
+#   status
+# The deploy user is in the docker group and therefore root-equivalent on this host; the forced command limits
+# what a STOLEN CI KEY can do, it does not sandbox the user (docs/runbook.md "Security notes").
+set -Eeuo pipefail
+AGHIGH_ROOT="${AGHIGH_ROOT:-/opt/aghigh}"
+SHARED_DIR="$AGHIGH_ROOT/shared"
+ENV_FILE="$SHARED_DIR/.env.production"
+PROJECT_DIR="$AGHIGH_ROOT/app"
+STATE_DIR="$AGHIGH_ROOT/state"
+
+say() { printf '%s [aghigh-deploy] %s\n' "$(date -u +%FT%TZ)" "$*" >&2; }
+fail() { say "ERROR: $*"; exit 64; }
+
+read -r -a words <<<"${SSH_ORIGINAL_COMMAND:-$*}"
+action="${words[0]:-}"
+sha_re='^[0-9a-f]{40}$'
+
+case "$action" in
+  deploy)
+    sha="${words[1]:-}"
+    [[ "$sha" =~ $sha_re ]] || fail "usage: deploy <40-hex sha> [--allow-infra-recreate] [--skip-migrate] [--force]"
+    flags=()
+    for word in "${words[@]:2}"; do
+      case "$word" in
+        --allow-infra-recreate | --skip-migrate | --force) flags+=("$word") ;;
+        *) fail "option not allowed: $word" ;;
+      esac
+    done
+    [ -r "$ENV_FILE" ] || fail "$ENV_FILE is missing"
+    repo="$(awk 'index($0, "APP_IMAGE_REPO=") == 1 { v = substr($0, 16) } END { print v }' "$ENV_FILE")"
+    [ -n "$repo" ] || fail "APP_IMAGE_REPO is not set in $ENV_FILE"
+    image="$repo:$sha"
+    say "pulling $image"
+    docker pull --quiet "$image" >/dev/null || fail "cannot pull $image"
+    # The image carries the compose files and scripts of its own commit: copy them out and hand over.
+    bundle="$AGHIGH_ROOT/bundle.next"
+    rm -rf "$bundle"
+    mkdir -p "$bundle"
+    cid="$(docker create "$image" true)"
+    trap 'docker rm "$cid" >/dev/null 2>&1 || true' EXIT
+    for path in compose.yaml compose.prod.yml docker scripts; do
+      docker cp "$cid:/app/$path" "$bundle/$path" || fail "$image has no /app/$path"
+    done
+    docker rm "$cid" >/dev/null
+    trap - EXIT
+    exec "$bundle/scripts/deploy/deploy.sh" "$sha" "${flags[@]}"
+    ;;
+  rollback)
+    sha="${words[1]:-}"
+    [ -z "$sha" ] || [[ "$sha" =~ $sha_re ]] || fail "usage: rollback [<40-hex sha>]"
+    [ "${#words[@]}" -le 2 ] || fail "usage: rollback [<40-hex sha>]"
+    [ -x "$PROJECT_DIR/scripts/deploy/rollback.sh" ] || fail "nothing was deployed yet"
+    if [ -n "$sha" ]; then
+      exec "$PROJECT_DIR/scripts/deploy/rollback.sh" "$sha"
+    fi
+    exec "$PROJECT_DIR/scripts/deploy/rollback.sh"
+    ;;
+  status)
+    printf 'current:  %s\n' "$(cat "$STATE_DIR/current_sha" 2>/dev/null || echo none)"
+    printf 'previous: %s\n' "$(cat "$STATE_DIR/previous_sha" 2>/dev/null || echo none)"
+    printf 'history (newest first):\n'
+    sed 's/^/  /' "$STATE_DIR/history" 2>/dev/null || true
+    printf 'last events:\n'
+    tail -n 5 "$STATE_DIR/releases.log" 2>/dev/null | sed 's/^/  /' || true
+    ;;
+  *)
+    fail "allowed commands: deploy <sha> | rollback [<sha>] | status"
+    ;;
+esac

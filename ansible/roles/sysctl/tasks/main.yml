@@ -1,0 +1,72 @@
+# sysctl: kernel settings Redis and a proxy want, THP off, file limits, time sync.
+# The numbers are configuration, not measurements (docs/benchmarks/ has no host-tuning series).
+- name: Kernel parameters
+  ansible.posix.sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value | string }}"
+    sysctl_file: /etc/sysctl.d/60-aghigh.conf
+    state: present
+    reload: true
+  loop:
+    - { name: vm.overcommit_memory, value: 1 }          # Redis: background saves/AOF rewrites must not fail on fork
+    - { name: net.core.somaxconn, value: "{{ sysctl_somaxconn }}" }
+    - { name: fs.file-max, value: "{{ sysctl_file_max }}" }
+
+# Redis warns about latency and memory spikes with transparent huge pages. The setting is not a sysctl and does
+# not survive a reboot, hence a oneshot unit ordered before Docker.
+- name: Unit that disables transparent huge pages
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/disable-thp.service
+    content: |
+      # Managed by Ansible (role sysctl).
+      [Unit]
+      Description=Disable transparent huge pages (Redis)
+      DefaultDependencies=no
+      After=sysinit.target local-fs.target
+      Before=docker.service
+
+      [Service]
+      Type=oneshot
+      RemainAfterExit=yes
+      ExecStart=/bin/sh -c 'echo never > /sys/kernel/mm/transparent_hugepage/enabled && echo never > /sys/kernel/mm/transparent_hugepage/defrag'
+
+      [Install]
+      WantedBy=multi-user.target
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Apply unit changes now
+  ansible.builtin.meta: flush_handlers
+
+- name: THP unit is enabled and has run
+  ansible.builtin.systemd:
+    name: disable-thp.service
+    enabled: true
+    state: started
+
+- name: Open file limits for login sessions (containers get theirs from compose ulimits)
+  ansible.builtin.copy:
+    dest: /etc/security/limits.d/60-aghigh.conf
+    content: |
+      # Managed by Ansible (role sysctl).
+      *    soft nofile {{ nofile_limit }}
+      *    hard nofile {{ nofile_limit }}
+      root soft nofile {{ nofile_limit }}
+      root hard nofile {{ nofile_limit }}
+    owner: root
+    group: root
+    mode: "0644"
+
+# JWT expiry, signed webhooks (tolerance window) and Let's Encrypt all depend on a correct clock.
+- name: Time sync package
+  ansible.builtin.apt:
+    name: systemd-timesyncd
+    state: present
+
+- name: Time sync is enabled and running
+  ansible.builtin.service:
+    name: systemd-timesyncd
+    enabled: true
+    state: started

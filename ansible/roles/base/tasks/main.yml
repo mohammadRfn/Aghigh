@@ -1,0 +1,96 @@
+# base: packages, admin user (sudo), non-root deploy user, SSH hardening through a drop-in.
+- name: Admin keys are required before password and root logins are switched off
+  ansible.builtin.assert:
+    that:
+      - admin_ssh_public_keys | length > 0
+      - deploy_ci_public_key | length > 0
+    fail_msg: "Set admin_ssh_public_keys and deploy_ci_public_key in group_vars first: this role disables root and password logins."
+
+- name: Point apt at a mirror (only when apt_mirror_url is set)
+  ansible.builtin.replace:
+    path: /etc/apt/sources.list.d/ubuntu.sources
+    regexp: '^URIs: https?://[^\s]*archive\.ubuntu\.com/ubuntu/?$'
+    replace: "URIs: {{ apt_mirror_url }}"
+  when: apt_mirror_url | length > 0
+
+- name: Point apt security updates at a mirror (only when apt_security_mirror_url is set)
+  ansible.builtin.replace:
+    path: /etc/apt/sources.list.d/ubuntu.sources
+    regexp: '^URIs: https?://security\.ubuntu\.com/ubuntu/?$'
+    replace: "URIs: {{ apt_security_mirror_url }}"
+  when: apt_security_mirror_url | length > 0
+
+- name: Base packages
+  ansible.builtin.apt:
+    name: [ca-certificates, curl, jq, acl, python3-debian, logrotate, util-linux]
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Admin user
+  ansible.builtin.user:
+    name: "{{ admin_user }}"
+    shell: /bin/bash
+    groups: [sudo]
+    append: true
+    password_lock: true
+
+- name: Admin SSH keys
+  ansible.posix.authorized_key:
+    user: "{{ admin_user }}"
+    key: "{{ admin_ssh_public_keys | join('\n') }}"
+    exclusive: true
+
+- name: Passwordless sudo for the admin user (key-only account, there is no password to ask for)
+  ansible.builtin.copy:
+    dest: "/etc/sudoers.d/90-{{ admin_user }}"
+    content: "{{ admin_user }} ALL=(ALL) NOPASSWD:ALL\n"
+    owner: root
+    group: root
+    mode: "0440"
+    validate: /usr/sbin/visudo -cf %s
+
+- name: Deploy user (no sudo, no password)
+  ansible.builtin.user:
+    name: "{{ deploy_user }}"
+    shell: /bin/bash
+    password_lock: true
+
+# The deploy user is in the docker group (role docker) and therefore root-equivalent on this host. The CI key is
+# limited by a forced command: whatever the client asks for, sshd runs aghigh-deploy, which accepts only
+# `deploy <sha>`, `rollback [<sha>]` and `status`. A stolen CI key can deploy an image from the configured
+# registry; it cannot get a shell, a tunnel or a file copy.
+- name: CI deploy key, restricted to the deploy wrapper
+  ansible.posix.authorized_key:
+    user: "{{ deploy_user }}"
+    key: "{{ deploy_ci_public_key }}"
+    key_options: 'command="/usr/local/bin/aghigh-deploy",no-port-forwarding,no-agent-forwarding,no-X11-forwarding,no-pty'
+    exclusive: true
+
+# 00- sorts before Ubuntu's 50-cloud-init.conf: sshd keeps the FIRST value it reads for each keyword.
+- name: SSH hardening drop-in
+  ansible.builtin.copy:
+    dest: /etc/ssh/sshd_config.d/00-aghigh-hardening.conf
+    content: |
+      # Managed by Ansible (role base).
+      Port {{ ssh_port }}
+      PermitRootLogin no
+      PasswordAuthentication no
+      KbdInteractiveAuthentication no
+      PubkeyAuthentication yes
+      AuthenticationMethods publickey
+      AllowUsers {{ admin_user }} {{ deploy_user }}
+      MaxAuthTries 3
+      LoginGraceTime 30
+      X11Forwarding no
+      AllowAgentForwarding no
+      # Local forwarding stays on: the admin tools (Grafana, Prometheus, GlitchTip, Horizon) are reached through
+      # SSH tunnels. The CI key has no-port-forwarding in authorized_keys.
+      AllowTcpForwarding local
+      ClientAliveInterval 300
+      ClientAliveCountMax 2
+    owner: root
+    group: root
+    mode: "0644"
+    validate: /usr/sbin/sshd -t -f %s
+  notify: Restart ssh

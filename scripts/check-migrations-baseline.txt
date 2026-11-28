@@ -1,0 +1,17 @@
+# Task 11: migrations that were applied before scripts/check-migrations.php existed. Findings in these files are
+# reported as "baseline" and never fail the check. NEVER add a new migration here: fix it or use an ignore marker
+# with a reason (docs/migration-policy.md).
+# First run (without this file): one finding, [drop-column] at line 23 of
+# Modules/Ordering/database/migrations/2026_05_20_000002_add_saga_columns_to_orders.php, inside down().
+Modules/Catalog/database/migrations/2026_05_01_000001_create_catalog_tables.php
+Modules/Catalog/database/migrations/2026_05_01_000002_enable_catalog_trigrams.php
+Modules/Catalog/database/migrations/2026_05_01_000003_add_catalog_query_indexes.php
+Modules/Chat/database/migrations/2026_06_01_000001_create_chat_tables.php
+Modules/Identity/database/migrations/0001_01_01_000000_create_identity_tables.php
+Modules/Inventory/database/migrations/2026_05_10_000002_create_inventory_tables.php
+Modules/Ordering/database/migrations/2026_05_10_000003_create_ordering_tables.php
+Modules/Ordering/database/migrations/2026_05_20_000002_add_saga_columns_to_orders.php
+Modules/Payment/database/migrations/2026_05_20_000001_create_payment_tables.php
+Modules/Shared/database/migrations/2026_05_10_000001_create_outbox_table.php
+database/migrations/0001_01_01_000001_create_cache_table.php
+database/migrations/0001_01_01_000002_create_jobs_table.php

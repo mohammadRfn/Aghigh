@@ -29,7 +29,7 @@ Run `make lint stan test test-int`, inspect generated `/docs/api`, prove clean `
   `ipAllowList` with an unroutable range -> 403) sits above `app`; `make obs-verify` proves it with and without a
   valid token. Prometheus scrapes `app:8000/internal/metrics` on the internal `backend` network with a bearer
   token (`METRICS_TOKEN`, constant-time compare; empty token = 404, never open). `/internal/metrics` has no limiter
-  and no session: it is not reachable by clients, only by the scraper. `/horizon` is Task 11.
+  and no session: it is not reachable by clients, only by the scraper. `/horizon` (Task 11): denied on the public entrypoint, served only through Traefik's `admin` entrypoint on 127.0.0.1 with `HORIZON_ADMIN_TOKEN` (docs/runbook.md "Admin tools").
 - Metric labels can never carry PII: route NAME or URI template, method, status class, queue, job class, limiter
   NAME, outcome, role. Never ids, emails, IPs, raw URLs or request ids (tests/Arch + MetricsEndpointTest cardinality).
 - Error reports (Sentry SDK -> GlitchTip): `send_default_pii=false`; `SentryScrubber::beforeSend` removes the request

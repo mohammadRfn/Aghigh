@@ -1,0 +1,28 @@
+# fail2ban: sshd jail (journald backend on Ubuntu 24.04).
+- name: Install fail2ban
+  ansible.builtin.apt:
+    name: fail2ban
+    state: present
+
+- name: Jail for sshd
+  ansible.builtin.copy:
+    dest: /etc/fail2ban/jail.d/aghigh-sshd.local
+    content: |
+      # Managed by Ansible (role fail2ban).
+      [sshd]
+      enabled = true
+      backend = systemd
+      port = {{ ssh_port }}
+      maxretry = 5
+      findtime = 10m
+      bantime = 1h
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart fail2ban
+
+- name: Service fail2ban is enabled and running
+  ansible.builtin.service:
+    name: fail2ban
+    enabled: true
+    state: started

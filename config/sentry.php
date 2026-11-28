@@ -32,6 +32,12 @@ return [
     // Never send IPs, cookies, user emails or request bodies by default; the scrubber removes them anyway.
     'send_default_pii' => false,
 
+    // Task 11: bounded transport (seconds, sentry-php options). With an unreachable DSN one exploratory run held
+    // each sampled request about 12 s (single run, not in docs/benchmarks). UNTESTED with these values: re-measure
+    // after enabling a DSN, and keep SENTRY_TRACES_SAMPLE_RATE at 0 until then.
+    'http_connect_timeout' => (float) env('SENTRY_HTTP_CONNECT_TIMEOUT', 1.0),
+    'http_timeout' => (float) env('SENTRY_HTTP_TIMEOUT', 2.0),
+
     'before_send' => [SentryScrubber::class, 'beforeSend'],
 
     'ignore_exceptions' => [],

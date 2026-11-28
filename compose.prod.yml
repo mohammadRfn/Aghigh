@@ -1,0 +1,353 @@
+# Task 11: PRODUCTION OVERLAY. Never used on its own:
+#   docker compose --env-file "$ENV_FILE" -f compose.yaml -f compose.prod.yml ...     (scripts/deploy/lib.sh: dc)
+#
+# What it changes on top of compose.yaml (docs/runbook.md has the full story):
+#   - app, horizon, reverb, scheduler run the registry image built with target `prod` (tag = git SHA): no source
+#     bind mount, no Mailpit, no dev ports, APP_ENV/APP_DEBUG/RATE_LIMIT_MULTIPLIER forced.
+#   - Traefik is the ONLY service that publishes ports in the default profile: 80 + 443 on 0.0.0.0 and the `admin`
+#     entrypoint (Horizon dashboard) on 127.0.0.1. Proof: scripts/deploy/verify-compose.sh (runs on every deploy).
+#   - Both Redis instances require a password (file mounted from the server, never in argv).
+#   - Postgres runs the custom image with pgBackRest and archives WAL; GlitchTip gets its OWN Postgres instance
+#     (no WAL archiving, no backups) instead of a database on the application cluster.
+#   - Every third-party image is pinned by digest (docs/deploy/image-digests.md; refresh: scripts/deploy/pin-digests.sh).
+#
+# Merge rules this file relies on (docs.docker.com/reference/compose-file/merge):
+#   mappings merge, sequences APPEND, `command`/`healthcheck.test` are replaced, `volumes` merge by target, `ports` by
+#   {ip,target,published,protocol}. Where appending would keep a dev value, `!override` replaces the attribute.
+#   `!override` needs Docker Compose >= 2.24.4 according to the Compose release notes (scripts/deploy/lib.sh refuses
+#   older versions; the real proof is verify-compose.sh on the merged model, not the version number).
+#   The tags are written on each service, not inside a YAML anchor: tag handling through merge keys was not verified.
+#
+# Loadtest settings must never be reachable from here (tests/Unit/LoadtestConfigTest.php): this file names no
+# loadtest env file and no loadtest switch.
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+# Forced for every PHP container. compose `environment:` wins over the env file, so a wrong line in
+# .env.production cannot turn debug on or scale the rate limits.
+x-prod-env: &prod-env
+  APP_ENV: production
+  APP_DEBUG: "false"
+  RATE_LIMIT_MULTIPLIER: "" # empty = unset (RateLimitMultiplier::assertAllowed); any value refuses to boot in production
+  SESSION_DRIVER: array # JWT is stateless
+  TRUSTED_PROXIES: 172.30.0.0/24 # MUST equal networks.edge.ipam in compose.yaml (verify-compose.sh compares them)
+  REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required in production}
+  GIT_SHA: ${APP_IMAGE_TAG:?APP_IMAGE_TAG is required}
+
+services:
+  traefik:
+    image: ${REGISTRY_PREFIX:-}${TRAEFIK_IMAGE:-traefik:v3.6@sha256:31267173a15b4944e797a76ffd9c419707c8d8b32fe5b610f80cd0cfa05f372d}
+    # `command` is replaced on merge, so this is the complete static configuration.
+    command:
+      - --providers.file.directory=/etc/traefik/dynamic
+      - --providers.file.watch=true
+      # web: only the ACME HTTP-01 challenge and the redirect to HTTPS.
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.web.http.redirections.entrypoint.permanent=true
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.websecure.http.tls.certresolver=le
+      # docs/rate-limiting.md: the edge must not trust client-supplied X-Forwarded-*. With insecure=false and NO
+      # trustedIPs Traefik discards what the client sent and writes its own values (this is also the default;
+      # spelled out so nobody adds trustedIPs by accident). Proof on a real stack: make verify-proxy.
+      - --entrypoints.web.forwardedHeaders.insecure=false
+      - --entrypoints.websecure.forwardedHeaders.insecure=false
+      # admin: Horizon dashboard only, published on 127.0.0.1 (SSH tunnel). See docker/traefik/prod/dynamic/routers.yml.
+      - --entrypoints.admin.address=:8081
+      - --entrypoints.admin.forwardedHeaders.insecure=false
+      - --entrypoints.metrics.address=:8082
+      - --certificatesresolvers.le.acme.email=${ACME_EMAIL:?ACME_EMAIL is required}
+      # One storage file per CA so a staging rehearsal never overwrites the production account/certificates.
+      - --certificatesresolvers.le.acme.storage=/acme/${ACME_STORAGE_FILE:-acme.json}
+      - --certificatesresolvers.le.acme.caserver=${ACME_CA_SERVER:-https://acme-v02.api.letsencrypt.org/directory}
+      - --certificatesresolvers.le.acme.httpchallenge=true
+      - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
+      - --api.dashboard=false
+      - --api.insecure=false
+      - --ping=true
+      - --accesslog=true
+      - --accesslog.format=json
+      - --accesslog.fields.headers.names.X-Request-Id=keep
+      - --metrics.prometheus=true
+      - --metrics.prometheus.entryPoint=metrics
+      - --metrics.prometheus.addEntryPointsLabels=true
+      - --metrics.prometheus.addRoutersLabels=true
+      - --metrics.prometheus.addServicesLabels=true
+      - --log.level=INFO
+      - --global.checknewversion=false
+      - --global.sendanonymoususage=false
+    ports: !override
+      - "0.0.0.0:80:80"
+      - "0.0.0.0:443:443"
+      - "127.0.0.1:${ADMIN_PORT:-8081}:8081"
+    environment:
+      # Read by the Go templates in docker/traefik/prod/dynamic/routers.yml. A real domain is required: Let's Encrypt
+      # does not issue certificates for a bare IP address.
+      APP_DOMAIN: ${APP_DOMAIN:?APP_DOMAIN is required}
+      HORIZON_ADMIN_TOKEN: ${HORIZON_ADMIN_TOKEN:-}
+    volumes: !override
+      - ./docker/traefik/prod/dynamic:/etc/traefik/dynamic:ro
+      # acme.json is created by Traefik itself with mode 600 (it refuses a more permissive file).
+      - traefik-acme:/acme
+
+  app:
+    image: ${APP_IMAGE_REPO:?APP_IMAGE_REPO is required}:${APP_IMAGE_TAG:?APP_IMAGE_TAG is required}
+    build:
+      target: prod
+    pull_policy: missing
+    # Rolled by scripts/deploy/roll.sh: no container_name, no published ports, healthcheck from compose.yaml (/up).
+    scale: ${APP_SCALE:-1}
+    env_file: !override
+      - ${ENV_FILE:-.env.production}
+    environment:
+      <<: *prod-env
+    volumes: !override
+      - ${SHARED_DIR:-/opt/aghigh/shared}/jwt:/app/storage/jwt:ro
+      - ${APP_LOG_DIR:-/var/log/aghigh}:/app/storage/logs
+    # Octane finishes in-flight requests on SIGTERM; roll.sh drains the container at Traefik before stopping it.
+    stop_grace_period: ${APP_STOP_GRACE:-30s}
+
+  horizon:
+    image: ${APP_IMAGE_REPO:?APP_IMAGE_REPO is required}:${APP_IMAGE_TAG:?APP_IMAGE_TAG is required}
+    pull_policy: missing
+    env_file: !override
+      - ${ENV_FILE:-.env.production}
+    environment:
+      <<: *prod-env
+    volumes: !override
+      - ${SHARED_DIR:-/opt/aghigh/shared}/jwt:/app/storage/jwt:ro
+      - ${APP_LOG_DIR:-/var/log/aghigh}:/app/storage/logs
+    # config/horizon.php: the longest supervisor timeout is 100 s (supervisor-default; orders 60, notifications 60,
+    # broadcasts 30) and it must stay below retry_after = 120 s. 110 s = 100 s + margin. The measured p99 job runtime
+    # is still TODO(measure) (docs/benchmarks/capacity-handoff.md row 9: make k6-spike, then read the snapshot).
+    stop_grace_period: ${HORIZON_STOP_GRACE:-110s}
+    # Workers send mail through the real SMTP provider. In dev Mailpit sat on `backend`; that network is internal,
+    # so Horizon also joins `egress` (sequences append on merge: backend + egress).
+    networks: [egress]
+
+  reverb:
+    image: ${APP_IMAGE_REPO:?APP_IMAGE_REPO is required}:${APP_IMAGE_TAG:?APP_IMAGE_TAG is required}
+    pull_policy: missing
+    scale: ${REVERB_SCALE:-1}
+    env_file: !override
+      - ${ENV_FILE:-.env.production}
+    environment:
+      <<: *prod-env
+    volumes: !override
+      - ${SHARED_DIR:-/opt/aghigh/shared}/jwt:/app/storage/jwt:ro
+      - ${APP_LOG_DIR:-/var/log/aghigh}:/app/storage/logs
+    # Reverb runs no queue jobs, so the Horizon job timeout does not bound it: the grace period only has to let
+    # reverb:start close its sockets (activity timeout 30 s). Raise REVERB_STOP_GRACE if you want the same ceiling.
+    stop_grace_period: ${REVERB_STOP_GRACE:-30s}
+
+  scheduler:
+    image: ${APP_IMAGE_REPO:?APP_IMAGE_REPO is required}:${APP_IMAGE_TAG:?APP_IMAGE_TAG is required}
+    pull_policy: missing
+    env_file: !override
+      - ${ENV_FILE:-.env.production}
+    environment:
+      <<: *prod-env
+    volumes: !override
+      - ${SHARED_DIR:-/opt/aghigh/shared}/jwt:/app/storage/jwt:ro
+      - ${APP_LOG_DIR:-/var/log/aghigh}:/app/storage/logs
+    stop_grace_period: ${SCHEDULER_STOP_GRACE:-60s}
+
+  # One-off migration container: migrator role, DIRECT to Postgres (never through PgBouncer). Profile `tools`
+  # means `up` never starts it; the deploy runs: docker compose ... --profile tools run --rm --no-deps migrate
+  migrate:
+    image: ${APP_IMAGE_REPO:?APP_IMAGE_REPO is required}:${APP_IMAGE_TAG:?APP_IMAGE_TAG is required}
+    pull_policy: missing
+    profiles: [tools]
+    env_file:
+      - ${ENV_FILE:-.env.production}
+    environment:
+      <<: *prod-env
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_DATABASE: ${POSTGRES_DB}
+      DB_USERNAME: ${DB_MIGRATOR_USER}
+      DB_PASSWORD: ${DB_MIGRATOR_PASSWORD}
+      # libpq reads PGOPTIONS: default lock/statement timeouts for EVERY migration (docs/migration-policy.md).
+      # A migration that needs longer (CREATE INDEX CONCURRENTLY) raises statement_timeout itself. UNTESTED.
+      PGOPTIONS: "-c lock_timeout=${MIGRATE_LOCK_TIMEOUT:-5s} -c statement_timeout=${MIGRATE_STATEMENT_TIMEOUT:-15min}"
+      LOG_JSON_STREAM: /app/storage/logs/migrate.jsonl
+    command: ["php", "artisan", "migrate", "--force"]
+    working_dir: /app
+    volumes:
+      - ${APP_LOG_DIR:-/var/log/aghigh}:/app/storage/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [backend]
+    cpus: ${WORKER_CPUS:-1}
+    mem_limit: ${WORKER_MEM_LIMIT:-512m}
+    logging: *logging
+    restart: "no"
+
+  postgres:
+    # Custom image = pinned postgres base + pgBackRest (docker/postgres/Dockerfile). The tag is set by hand in
+    # .env.production and changes rarely: recreating Postgres is NOT zero-downtime (deploy.sh refuses infra drift
+    # unless --allow-infra-recreate is given).
+    image: ${POSTGRES_BACKUP_IMAGE:?POSTGRES_BACKUP_IMAGE is required}
+    build:
+      context: ./docker/postgres
+      args:
+        POSTGRES_BASE_IMAGE: ${REGISTRY_PREFIX:-}${POSTGRES_BASE_IMAGE:-postgres:18@sha256:c699303802144847d238196173655dbbecf7a96aeca1565f2b02eb671a1f0b6b}
+        APT_MIRROR_DEBIAN: ${APT_MIRROR_DEBIAN:-}
+        APT_MIRROR_PGDG: ${APT_MIRROR_PGDG:-}
+    pull_policy: missing
+    # Only the pgBackRest settings (repository, cipher) come from a file; the application .env is NOT given to Postgres.
+    env_file: !override
+      - ${PGBACKREST_ENV_FILE:-.env.pgbackrest}
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_MIGRATOR_USER: ${DB_MIGRATOR_USER}
+      DB_MIGRATOR_PASSWORD: ${DB_MIGRATOR_PASSWORD}
+      DB_APP_USER: ${DB_APP_USER}
+      DB_APP_PASSWORD: ${DB_APP_PASSWORD}
+      DB_MONITOR_USER: ${DB_MONITOR_USER:-aghigh_monitor}
+      DB_MONITOR_PASSWORD: ${DB_MONITOR_PASSWORD:-}
+      # GlitchTip lives on postgres-glitchtip in production: 02-observability-roles.sh skips its database here.
+      GLITCHTIP_SHARED_CLUSTER: "false"
+      PGBACKREST_PG1_USER: ${POSTGRES_USER}
+    volumes:
+      # SFTP repository only: the private key (uid 999 = postgres). An empty directory for S3.
+      - ${SHARED_DIR:-/opt/aghigh/shared}/pgbackrest:/etc/pgbackrest/keys:ro
+    command:
+      - postgres
+      - -c
+      - archive_mode=${PG_ARCHIVE_MODE:-on}
+      - -c
+      - archive_command=pgbackrest archive-push %p
+      - -c
+      - archive_timeout=${PG_ARCHIVE_TIMEOUT:-300}
+      - -c
+      - wal_level=replica
+      - -c
+      - max_wal_senders=3
+    # `backend` is internal (no route out). pgBackRest must reach the OFF-server repository, so Postgres also joins
+    # `egress` (sequences append on merge: backend + egress). Nothing else lives on that network and no port is published: Postgres stays unreachable from outside.
+    networks: [egress]
+
+  redis-cache:
+    image: ${REGISTRY_PREFIX:-}${REDIS_IMAGE:-redis:8@sha256:ca1cb6df9313d0186b68f19b60fc2802e0c76e8542b2c05650b560e7bbb3cc8f}
+    # The password comes from a config file (requirepass), not from argv: `ps` and `docker inspect .Args` stay clean.
+    command: ["redis-server", "/usr/local/etc/redis/auth.conf", "--save", "", "--appendonly", "no", "--maxmemory", "${REDIS_CACHE_MAXMEMORY:-256mb}", "--maxmemory-policy", "allkeys-lru"]
+    environment:
+      REDISCLI_AUTH: ${REDIS_PASSWORD:?REDIS_PASSWORD is required in production}
+    volumes:
+      - ${SHARED_DIR:-/opt/aghigh/shared}/redis/auth.conf:/usr/local/etc/redis/auth.conf:ro
+    healthcheck:
+      # redis-cli exits 0 on NOAUTH, so the answer itself is checked. REDISCLI_AUTH authenticates it (no -a).
+      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
+
+  redis-queue:
+    image: ${REGISTRY_PREFIX:-}${REDIS_IMAGE:-redis:8@sha256:ca1cb6df9313d0186b68f19b60fc2802e0c76e8542b2c05650b560e7bbb3cc8f}
+    command: ["redis-server", "/usr/local/etc/redis/auth.conf", "--appendonly", "yes", "--appendfsync", "everysec", "--maxmemory", "${REDIS_QUEUE_MAXMEMORY:-300mb}", "--maxmemory-policy", "noeviction"]
+    environment:
+      REDISCLI_AUTH: ${REDIS_PASSWORD:?REDIS_PASSWORD is required in production}
+    volumes:
+      - ${SHARED_DIR:-/opt/aghigh/shared}/redis/auth.conf:/usr/local/etc/redis/auth.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
+
+  # No Mailpit in production: real SMTP comes from MAIL_* in .env.production. A profile nobody enables keeps the
+  # service out of `up` and out of `config` without depending on how `!reset` treats a whole service.
+  mailpit:
+    profiles: [dev-only]
+
+  # ---- profile "observability" (opt-in on the server: COMPOSE_PROFILES=observability in deploy.env) ----
+  # UIs keep their 127.0.0.1 bindings from compose.yaml (SSH tunnel). Images pinned by digest.
+  prometheus:
+    image: ${REGISTRY_PREFIX:-}${PROMETHEUS_IMAGE:-prom/prometheus:v3.16.0@sha256:e04987641b57704f408e31f6373ba4138ecf27cb4a165d24aabb6c38fddd0f06}
+  grafana:
+    image: ${REGISTRY_PREFIX:-}${GRAFANA_IMAGE:-grafana/grafana:12.4.14@sha256:ae509d9ae8c1021ca32ec370a9ca975d40165eda9fccd1e1102d317ff8787cd7}
+  loki:
+    image: ${REGISTRY_PREFIX:-}${LOKI_IMAGE:-grafana/loki:3.6.20@sha256:be040ec94865dabe4821ce1c0f109452bd4b5acb566ae376672696eb43caedb7}
+  alloy:
+    image: ${REGISTRY_PREFIX:-}${ALLOY_IMAGE:-grafana/alloy:v1.21.3@sha256:8ab871206bd2d8f89277f53abffee5f452a293980788d52f85fa183a87a505a4}
+    volumes:
+      # same target as compose.yaml (./storage/logs): replaced by the host log directory the app containers write to
+      - ${APP_LOG_DIR:-/var/log/aghigh}:/var/log/aghigh:ro
+  cadvisor:
+    image: ${REGISTRY_PREFIX:-}${CADVISOR_IMAGE:-gcr.io/cadvisor/cadvisor:v0.52.1@sha256:f40e65878e25c2e78ea037f73a449527a0fb994e303dc3e34cb6b187b4b91435}
+  node-exporter:
+    image: ${REGISTRY_PREFIX:-}${NODE_EXPORTER_IMAGE:-prom/node-exporter:v1.12.1@sha256:1b4e4438faca4dd7e001dd445d161a4a2091b0fededa84093b3a8dfeae1f1be0}
+  postgres-exporter:
+    image: ${REGISTRY_PREFIX:-}${POSTGRES_EXPORTER_IMAGE:-prometheuscommunity/postgres-exporter:v0.20.1@sha256:ac5ec343104fae0e2d84a27bb8d69b38430a11910c5382cad85d478d2bab713e}
+  pgbouncer-exporter:
+    image: ${REGISTRY_PREFIX:-}${PGBOUNCER_EXPORTER_IMAGE:-prometheuscommunity/pgbouncer-exporter:v0.12.1@sha256:30f31b6c2efdad3647f8182cc7c1a3a19e42bae5d17387694989f969371c230d}
+  redis-exporter-queue:
+    image: ${REGISTRY_PREFIX:-}${REDIS_EXPORTER_IMAGE:-oliver006/redis_exporter:v1.97.0-alpine@sha256:ae30be386ab25600a8b222538a868d1b156b7e411073f7d2d5208fe79cc98d81}
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required in production}
+  redis-exporter-cache:
+    image: ${REGISTRY_PREFIX:-}${REDIS_EXPORTER_IMAGE:-oliver006/redis_exporter:v1.97.0-alpine@sha256:ae30be386ab25600a8b222538a868d1b156b7e411073f7d2d5208fe79cc98d81}
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required in production}
+
+  # GlitchTip decision (docs/runbook.md "Backups"): pgBackRest backs up and archives a whole CLUSTER, a single
+  # database cannot be left out of WAL archiving. GlitchTip writes events into daily partitions, which would
+  # dominate the WAL stream and the repository, so it runs on its own instance: no archiving, no backups, events
+  # are disposable (GLITCHTIP_EVENT_LIFE_DAYS).
+  postgres-glitchtip:
+    image: ${REGISTRY_PREFIX:-}${POSTGRES_BASE_IMAGE:-postgres:18@sha256:c699303802144847d238196173655dbbecf7a96aeca1565f2b02eb671a1f0b6b}
+    profiles: [observability]
+    environment:
+      POSTGRES_DB: ${GLITCHTIP_DB_NAME:-glitchtip}
+      POSTGRES_USER: ${GLITCHTIP_DB_USER:-glitchtip}
+      POSTGRES_PASSWORD: ${GLITCHTIP_DB_PASSWORD:-}
+    volumes:
+      - glitchtip-pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [backend]
+    cpus: ${GLITCHTIP_PG_CPUS:-1}
+    mem_limit: ${GLITCHTIP_PG_MEM_LIMIT:-512m} # provisional configuration, TODO(measure): docker stats under real event volume
+    logging: *logging
+    restart: unless-stopped
+
+  glitchtip:
+    image: ${REGISTRY_PREFIX:-}${GLITCHTIP_IMAGE:-glitchtip/glitchtip:v6.0.3@sha256:db857de5ac398e274d36f521b1cff0c76d714925b865e45b64fe0bd2f4499ec8}
+    environment:
+      DATABASE_URL: postgres://${GLITCHTIP_DB_USER:-glitchtip}:${GLITCHTIP_DB_PASSWORD:-}@postgres-glitchtip:5432/${GLITCHTIP_DB_NAME:-glitchtip}
+      EMAIL_URL: ${GLITCHTIP_EMAIL_URL:-consolemail://}
+    depends_on:
+      postgres-glitchtip:
+        condition: service_healthy
+  glitchtip-worker:
+    image: ${REGISTRY_PREFIX:-}${GLITCHTIP_IMAGE:-glitchtip/glitchtip:v6.0.3@sha256:db857de5ac398e274d36f521b1cff0c76d714925b865e45b64fe0bd2f4499ec8}
+    environment:
+      DATABASE_URL: postgres://${GLITCHTIP_DB_USER:-glitchtip}:${GLITCHTIP_DB_PASSWORD:-}@postgres-glitchtip:5432/${GLITCHTIP_DB_NAME:-glitchtip}
+      EMAIL_URL: ${GLITCHTIP_EMAIL_URL:-consolemail://}
+    depends_on:
+      postgres-glitchtip:
+        condition: service_healthy
+  glitchtip-migrate:
+    image: ${REGISTRY_PREFIX:-}${GLITCHTIP_IMAGE:-glitchtip/glitchtip:v6.0.3@sha256:db857de5ac398e274d36f521b1cff0c76d714925b865e45b64fe0bd2f4499ec8}
+    environment:
+      DATABASE_URL: postgres://${GLITCHTIP_DB_USER:-glitchtip}:${GLITCHTIP_DB_PASSWORD:-}@postgres-glitchtip:5432/${GLITCHTIP_DB_NAME:-glitchtip}
+      EMAIL_URL: ${GLITCHTIP_EMAIL_URL:-consolemail://}
+    depends_on:
+      postgres-glitchtip:
+        condition: service_healthy
+
+networks:
+  # Outbound-only bridge for containers that are otherwise on the internal `backend` network (Postgres -> backup
+  # repository, Horizon -> SMTP). It is NOT the edge network: TRUSTED_PROXIES keeps covering only `edge`.
+  egress:
+
+volumes:
+  traefik-acme:
+  glitchtip-pgdata:
